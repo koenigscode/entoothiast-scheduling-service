@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "mqtt": "^5.1.4"
+    "mqtt": "^5.1.4",
+    "mqtt-request": "^1.0.0"
   }
 }
