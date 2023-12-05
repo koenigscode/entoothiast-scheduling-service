@@ -35,6 +35,17 @@ mqttReq.response("v1/dentists/read", (payload) => {
     }
 });
 
+mqttReq.response("v1/timeslots/delete", (payload) => {
+    payload = JSON.parse(payload)
+
+    try {
+        const timeslot = db.querySync(`DELETE FROM public.timeslot where id = ${payload.timeslotId} and dentist_id = ${payload.dentistId} RETURNING *`)
+        return JSON.stringify({ httpStatus: 200, timeslot})
+    } catch (e) {
+        return JSON.stringify({ httpStatus: 500, message: `Some error occurred` })
+    }
+});
+
 mqttReq.response("v1/timeslots/create", (payload) => {
     payload = JSON.parse(payload)
 
