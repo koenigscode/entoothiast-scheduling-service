@@ -39,10 +39,17 @@ mqttReq.response("v1/timeslots/delete", (payload) => {
     payload = JSON.parse(payload)
 
     try {
-        const timeslot = db.querySync(`DELETE FROM public.timeslot where id = ${payload.timeslotId} and dentist_id = ${payload.dentistId} RETURNING *`)
-        return JSON.stringify({ httpStatus: 200, timeslot})
+        const result = db.querySync(
+            `DELETE FROM public.timeslot WHERE id = ${payload.timeslotId} AND dentist_id = ${payload.dentistId} RETURNING *`
+        );
+
+        if (result && result.length > 0) {
+            return JSON.stringify({ httpStatus: 200, timeslot: result });
+        } else {
+            return JSON.stringify({ httpStatus: 404, message: 'Timeslot or Dentist ID not found' });
+        }
     } catch (e) {
-        return JSON.stringify({ httpStatus: 500, message: `Some error occurred` })
+        return JSON.stringify({ httpStatus: 500, message: `Some error occurred` });
     }
 });
 
@@ -51,7 +58,7 @@ mqttReq.response("v1/timeslots/create", (payload) => {
 
     try {
         db.querySync("insert into public.timeslot (dentist_id, start_time, end_time) values ($1, $2, $3)", [payload.dentistId, payload.start_time, payload.end_time])
-        return JSON.stringify({ httpStatus: 201, message: `Registered user ${payload.dentistId}` })
+        return JSON.stringify({ httpStatus: 201, message: `Created a new timeslot from ${payload.start_time} to ${payload.end_time}` })
     } catch (e) {
         return JSON.stringify({httpStatus: 500, message: 'Some error occurred'})
     }
