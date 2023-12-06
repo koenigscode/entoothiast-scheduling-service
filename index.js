@@ -10,6 +10,8 @@ const client = mqtt.connect(process.env.BROKER_URL)
 const mqttReq = new MqttRequest.default(client);
 
 console.log(`Broker URL: ${process.env.BROKER_URL}`)
+const db = new PGClient()
+db.connectSync(process.env.CONNECTION_STRING)
 
 mqttReq.response("demo", payload => {
     payload = JSON.parse(payload)
@@ -18,6 +20,17 @@ mqttReq.response("demo", payload => {
     return JSON.stringify(payload)
 })
 
+mqttReq.response("v1/clinics/read", (payload) => {
+    payload = JSON.parse(payload)
+    console.log(payload)
+
+    try {
+        const clinics = db.querySync('SELECT * FROM public.clinic')
+        return JSON.stringify({ httpStatus: 200, clinics})
+    } catch (e) {
+        return JSON.stringify({ httpStatus: 400, message: "No clinics found"})
+    }
+})
 mqttReq.response("v1/timeslots", (payload) => {
     
     payload = JSON.parse(payload);
