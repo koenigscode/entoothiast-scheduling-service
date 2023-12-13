@@ -14,23 +14,19 @@ console.log(`Broker URL: ${process.env.BROKER_URL}`)
 mqttReq.response("demo", payload => {
     payload = JSON.parse(payload)
     payload.message += " and hi from scheduling-service"
-    console.log(payload)
+
     return JSON.stringify(payload)
 })
 
 mqttReq.response("v1/timeslots", (payload) => {
-    
-    payload = JSON.parse(payload);
-    console.log(payload)
 
-    if (!payload.startTime)
-        return JSON.stringify({ httpStatus: 400, message: "Start time needs to be specified." })
+    payload = JSON.parse(payload);
 
     try {
-        db.querySync("select from public.timeslot where start_time = $1", [payload.startTime || Date.now()])
-        return JSON.stringify({ httpStatus: 201, message: `${payload}` })
+        const timeslots = db.querySync("select from public.timeslot where start_time = $1", [payload.startTime || (new Date()).toISOString()])
+        return JSON.stringify({ httpStatus: 201, timeslots })
     } catch (e) {
-        return JSON.stringify({ httpStatus: 400, message: "Timeslots with this start time not found."})
+        return JSON.stringify({ httpStatus: 500, message: "Internal Server Error" })
     }
 });
 
