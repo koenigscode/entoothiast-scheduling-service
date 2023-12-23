@@ -60,9 +60,10 @@ mqttReq.response("v1/timeslots/create", (payload) => {
     payload = JSON.parse(payload);
 
     try {
-        db.querySync("INSERT INTO public.timeslot (dentist_id, start_time, end_time) VALUES ($1, $2, $3)", [payload.dentistId, payload.start_time, payload.end_time]);
+        const token = jwt.decode(payload.token)
+        db.querySync("INSERT INTO public.timeslot (dentist_id, start_time, end_time) VALUES ($1, $2, $3)", [token.id, payload.start_time, payload.end_time]);
 
-        const insertedTimeslot = db.querySync("SELECT * FROM public.timeslot WHERE dentist_id = $1 AND start_time = $2 AND end_time = $3", [payload.dentistId, payload.start_time, payload.end_time]);
+        const insertedTimeslot = db.querySync("SELECT * FROM public.timeslot WHERE dentist_id = $1 AND start_time = $2 AND end_time = $3", [token.id, payload.start_time, payload.end_time]);
 
         if (insertedTimeslot && insertedTimeslot.length > 0) {
             return JSON.stringify({
