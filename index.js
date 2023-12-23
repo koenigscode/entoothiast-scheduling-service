@@ -39,7 +39,6 @@ mqttReq.response("v1/dentists/read", (payload) => {
 });
 
 mqttReq.response("v1/timeslots/delete", (payload) => {
-    //change the query
     payload = JSON.parse(payload)
 
     try {
@@ -58,16 +57,28 @@ mqttReq.response("v1/timeslots/delete", (payload) => {
 });
 
 mqttReq.response("v1/timeslots/create", (payload) => {
-    payload = JSON.parse(payload)
+    payload = JSON.parse(payload);
 
     try {
-        db.querySync("insert into public.timeslot (dentist_id, start_time, end_time) values ($1, $2, $3)", [payload.dentistId, payload.start_time, payload.end_time])
-        return JSON.stringify({ httpStatus: 201, message: `Created a new timeslot from ${payload.start_time} to ${payload.end_time}` })
-    } catch (e) {
-        return JSON.stringify({httpStatus: 500, message: 'Some error occurred'})
-    }
+        db.querySync("INSERT INTO public.timeslot (dentist_id, start_time, end_time) VALUES ($1, $2, $3)", [payload.dentistId, payload.start_time, payload.end_time]);
 
+        const insertedTimeslot = db.querySync("SELECT * FROM public.timeslot WHERE dentist_id = $1 AND start_time = $2 AND end_time = $3", [payload.dentistId, payload.start_time, payload.end_time]);
+
+        if (insertedTimeslot && insertedTimeslot.length > 0) {
+            return JSON.stringify({
+                httpStatus: 201,
+                message: `Created a new timeslot from ${payload.start_time} to ${payload.end_time}`,
+                timeslot: insertedTimeslot[0] 
+            });
+        }
+    } catch (e) {
+        return JSON.stringify({
+            httpStatus: 500,
+            message: 'Some error occurred'
+        });
+    }
 });
+
 
 mqttReq.response("v1/dentists/ratings/create", (payload) => {
     payload = JSON.parse(payload)
