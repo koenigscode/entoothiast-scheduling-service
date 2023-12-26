@@ -42,14 +42,15 @@ mqttReq.response("v1/timeslots/delete", (payload) => {
     payload = JSON.parse(payload)
 
     try {
+        const token = jwt.decode(payload.token)
         const result = db.querySync(
-            'DELETE FROM public.timeslot WHERE id = $1 AND dentist_id = $2 RETURNING *', [payload.timeslotId, payload.dentistId]
+            'DELETE FROM public.timeslot WHERE id = $1 AND dentist_id = $2 RETURNING *', [payload.timeslotId, token.id]
         );
 
         if (result && result.length > 0) {
             return JSON.stringify({ httpStatus: 200, timeslot: result });
         } else {
-            return JSON.stringify({ httpStatus: 404, message: 'Timeslot or Dentist ID not found' });
+            return JSON.stringify({ httpStatus: 404, message: 'Timeslot ID not found' });
         }
     } catch (e) {
         return JSON.stringify({ httpStatus: 500, message: `Some error occurred` });
