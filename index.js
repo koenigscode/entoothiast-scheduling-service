@@ -92,13 +92,14 @@ mqttReq.response("v1/dentists/ratings/create", (payload) => {
         console.log(token)
         const dentist = db.querySync(`SELECT * FROM public.patient_on_dentist WHERE dentist_id = $1`, [payload.dentistId]);
         if (dentist.length === 0){
-            db.querySync("insert into public.patient_on_dentist (patient_id, dentist_id, rating) values ($1, $2, $3)", [token.id, payload.dentistId, rating])
+            db.querySync("insert into public.patient_on_dentist (patient_id, dentist_id, rating, favorite_dentist) values ($1, $2, $3, $4)", [token.id, payload.dentistId, rating, payload.favorite_dentist])
         }
         //if there is a dentist in the dentist_on_patient table, just insert a new rating.
         else{
-             db.querySync(`UPDATE public.patient_on_dentist SET rating = $1 where dentist_id = $2`, [payload.rating, payload.dentistId])
+             db.querySync(`UPDATE public.patient_on_dentist SET rating = $1, favorite_dentist = $2 where dentist_id = $3`, [payload.rating, payload.favorite_dentist, payload.dentistId])
         }
-        return JSON.stringify({ httpStatus: 201, message: `Posted new rating of ${rating} for dentist with id ${payload.dentistId}`})
+        const row = db.querySync(`select * from public.patient_on_dentist where patient_id = $1 and dentist_id = $2`, [token.id, payload.dentistId])
+        return JSON.stringify({ httpStatus: 201, row})
     } catch (e) {
         console.log(e)
         return JSON.stringify({ httpStatus: 500, message: `Some error occurred`, errorInternal: e })
