@@ -1,6 +1,7 @@
 import * as mqtt from "mqtt"
 import MqttRequest from "mqtt-request"
 import PGClient from "pg-native"
+import jwt from "jsonwebtoken"
 
 const db = new PGClient()
 db.connectSync(process.env.CONNECTION_STRING)
@@ -49,7 +50,8 @@ mqttReq.response("v1/appointments/all", (payload) => {
     payload = JSON.parse(payload)
 
     try {
-        const appointments = db.querySync("SELECT * FROM public.appointment")
+        const token = jwt.decode(payload.token)
+        const appointments = db.querySync(`SELECT * FROM public.appointment where dentist_id = $1`, [token.id])
         return JSON.stringify({ httpStatus: 200, appointments})
     } catch (e) {
         return JSON.stringify({ httpStatus: 500, message: `Some error occurred` })
