@@ -45,6 +45,17 @@ mqttReq.response("v1/timeslots", (payload) => {
     }
 });
 
+mqttReq.response("v1/appointments/all", (payload) => {
+    payload = JSON.parse(payload)
+
+    try {
+        const appointments = db.querySync("SELECT * FROM public.appointment")
+        return JSON.stringify({ httpStatus: 200, appointments})
+    } catch (e) {
+        return JSON.stringify({ httpStatus: 500, message: `Some error occurred` })
+    }
+});
+
 mqttReq.response("v1/appointments/create", (payload) => {
     payload = JSON.parse(payload);
     console.log('Received payload:', payload);
