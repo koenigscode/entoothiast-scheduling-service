@@ -51,7 +51,11 @@ mqttReq.response("v1/appointments/all", (payload) => {
 
     try {
         const token = jwt.decode(payload.token)
-        const appointments = db.querySync(`SELECT * FROM public.appointment where dentist_id = $1`, [token.id])
+        const appointments = db.querySync(`SELECT appointment.id AS appointment_id, appointment.*, timeslot.*, "user".name AS patient_name
+        FROM appointment
+        JOIN timeslot ON timeslot.id = appointment.timeslot_id
+        JOIN "user" ON "user".id = appointment.patient_id
+        WHERE appointment.dentist_id = $1`, [token.id])
         return JSON.stringify({ httpStatus: 200, appointments})
     } catch (e) {
         return JSON.stringify({ httpStatus: 500, message: `Some error occurred` })
