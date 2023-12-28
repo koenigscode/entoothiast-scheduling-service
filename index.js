@@ -85,6 +85,18 @@ mqttReq.response("v1/timeslots/create", (payload) => {
 mqttReq.response("v1/dentists/ratings/create", (payload) => {
     payload = JSON.parse(payload)
     try {
+        console.log(typeof payload.rating)
+        console.log(typeof payload.favorite_dentist)
+        if (typeof payload.rating != "number" && payload.rating != undefined){
+            return JSON.stringify({ httpStatus: 400, message: "Rating has to be a number"})
+        }
+        
+        if (typeof payload.favorite_dentist != "boolean" && payload.favorite_dentist != undefined){
+            return JSON.stringify({ httpStatus: 400, message: "Favorite_dentist field has to have a boolean value"})
+        }
+        if (payload.rating < 1 || payload.rating > 5){
+            return JSON.stringify({ httpStatus: 400, message: "Rating has to be a number between 1 and 5"})
+        }
         //if there is not dentist with the payload.dentistId -> insert new dentist and new rating
         //don't forget to also send the patient_id -> this table has a compound key of patient_id and dentist_id
         const token = jwt.decode(payload.token)
