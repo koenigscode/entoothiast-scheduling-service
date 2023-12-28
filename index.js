@@ -106,22 +106,57 @@ mqttReq.response("v1/appointments/update", (payload) => {
     console.log('Received payload:', payload);
     const appointmentId = parseInt(payload.appointmentId, 10);
     const requestBody = payload.requestBody;
+
+    //check if appointment id is an integer
     if (isNaN(appointmentId)) {
         return JSON.stringify({ httpStatus: 400, message: 'Invalid payload. Appointment ID is not a valid number.' });
     }
+
     try {
         const currentAppointment = db.querySync('SELECT * FROM public.appointment WHERE id = $1', [appointmentId]);
+
         if (currentAppointment.length === 0) {
             return JSON.stringify({ httpStatus: 404, message: `Appointment with ID ${appointmentId} not found.` });
         }
-        const result = db.querySync(
-            'UPDATE public.appointment SET patient_id = $1, dentist_id = $2, timeslot_id = $3, cancelled = $4, confirmed = $5 WHERE id = $6 RETURNING *',
-            [requestBody.patient_id, requestBody.dentist_id, requestBody.timeslot_id, requestBody.cancelled, requestBody.confirmed, appointmentId]
-        );
+
+        const updateFields = [];
+        const updateValues = [];
+
+        // Check and add fields to be updated
+        if (requestBody.patient_id !== undefined) {
+            updateFields.push(`patient_id = ${requestBody.patient_id}`);
+        }
+
+        if (requestBody.dentist_id !== undefined) {
+            updateFields.push(`dentist_id = ${requestBody.dentist_id}`);
+        }
+
+        if (requestBody.timeslot_id !== undefined) {
+            updateFields.push(`timeslot_id = ${requestBody.timeslot_id}`);
+        }
+
+        if (requestBody.cancelled !== undefined) {
+            updateFields.push(`cancelled = ${requestBody.cancelled}`);
+        }
+
+        if (requestBody.confirmed !== undefined) {
+            updateFields.push(`confirmed = ${requestBody.confirmed}`);
+        }
+
+        if (updateFields.length === 0) {
+            return JSON.stringify({ httpStatus: 400, message: 'No fields provided for update.' });
+        }
+
+        //update fields in the database
+        const updateQuery = `UPDATE public.appointment SET ${updateFields.join(', ')} WHERE id = $1 RETURNING *`;
+
+        const result = db.querySync(updateQuery, [appointmentId]);
         const updatedAppointment = result.length > 0 ? result[0] : null;
+
         if (!updatedAppointment) {
             return JSON.stringify({ httpStatus: 500, message: 'Failed to retrieve updated appointment.' });
         }
+
         console.log('Updated appointment:', updatedAppointment);
         return JSON.stringify({ httpStatus: 200, message: `Appointment with ID ${appointmentId} updated successfully.`, appointment: updatedAppointment });
     } catch (error) {
@@ -129,6 +164,7 @@ mqttReq.response("v1/appointments/update", (payload) => {
         return JSON.stringify({ httpStatus: 500, message: 'Internal Server Error' });
     }
 });
+
 
 client.on("connect", () => {
     console.log("scheduling-service connected to broker")
