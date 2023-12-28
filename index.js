@@ -6,9 +6,17 @@ import jwt from "jsonwebtoken"
 const db = new PGClient()
 db.connectSync(process.env.CONNECTION_STRING)
 
+
+
 const client = mqtt.connect(process.env.BROKER_URL)
+
+MqttRequest.timeout = 5000;
+
+db.connectSync(process.env.CONNECTION_STRING)
+
+
 /** @type {MqttRequest}*/
-const mqttReq = new MqttRequest.default(client);
+export const mqttReq = new MqttRequest.default(client);
 
 console.log(`Broker URL: ${process.env.BROKER_URL}`)
 
@@ -18,6 +26,85 @@ mqttReq.response("demo", payload => {
     console.log(payload)
     return JSON.stringify(payload)
 })
+
+mqttReq.response("v1/dentists/read", (payload) => {
+    payload = JSON.parse(payload)
+
+    try {
+        const dentists = db.querySync("SELECT id, name, clinic_id FROM public.user WHERE role = 'dentist'")
+        return JSON.stringify({ httpStatus: 200, dentists})
+    } catch (e) {
+        return JSON.stringify({ httpStatus: 500, message: `Some error occurred` })
+    }
+});
+
+mqttReq.response("v1/timeslots/delete", (payload) => {
+    payload = JSON.parse(payload)
+
+    try {
+        const token = jwt.decode(payload.token)
+        const result = db.querySync(
+            'DELETE FROM public.timeslot WHERE id = $1 AND dentist_id = $2 RETURNING *', [payload.timeslotId, token.id]
+        );
+
+        if (result && result.length > 0) {
+            return JSON.stringify({ httpStatus: 200, timeslot: result });
+        } else {
+            return JSON.stringify({ httpStatus: 404, message: 'Timeslot ID not found' });
+        }
+    } catch (e) {
+        return JSON.stringify({ httpStatus: 500, message: `Some error occurred` });
+    }
+});
+
+mqttReq.response("v1/timeslots/create", (payload) => {
+    payload = JSON.parse(payload);
+
+    try {
+        const token = jwt.decode(payload.token)
+        db.querySync("INSERT INTO public.timeslot (dentist_id, start_time, end_time) VALUES ($1, $2, $3)", [token.id, payload.start_time, payload.end_time]);
+
+        const insertedTimeslot = db.querySync("SELECT * FROM public.timeslot WHERE dentist_id = $1 AND start_time = $2 AND end_time = $3", [token.id, payload.start_time, payload.end_time]);
+
+        if (insertedTimeslot && insertedTimeslot.length > 0) {
+            return JSON.stringify({
+                httpStatus: 201,
+                message: `Created a new timeslot from ${payload.start_time} to ${payload.end_time}`,
+                timeslot: insertedTimeslot[0] 
+            });
+        }
+    } catch (e) {
+        return JSON.stringify({
+            httpStatus: 500,
+            message: 'Some error occurred'
+        });
+    }
+});
+
+
+mqttReq.response("v1/dentists/ratings/create", (payload) => {
+    payload = JSON.parse(payload)
+    try {
+        const rating = parseInt(payload.rating)
+        //if there is not dentist with the payload.dentistId -> insert new dentist and new rating
+        //don't forget to also send the patient_id -> this table has a compound key of patient_id and dentist_id
+        const token = jwt.decode(payload.token)
+        console.log(token)
+        const dentist = db.querySync(`SELECT * FROM public.patient_on_dentist WHERE dentist_id = $1`, [payload.dentistId]);
+        if (dentist.length === 0){
+            db.querySync("insert into public.patient_on_dentist (patient_id, dentist_id, rating) values ($1, $2, $3)", [token.id, payload.dentistId, rating])
+        }
+        //if there is a dentist in the dentist_on_patient table, just insert a new rating.
+        else{
+             db.querySync(`UPDATE public.patient_on_dentist SET rating = $1 where dentist_id = $2`, [payload.rating, payload.dentistId])
+        }
+        return JSON.stringify({ httpStatus: 201, message: `Posted new rating of ${rating} for dentist with id ${payload.dentistId}`})
+    } catch (e) {
+        console.log(e)
+        return JSON.stringify({ httpStatus: 500, message: `Some error occurred`, errorInternal: e })
+    }
+});
+
 
 mqttReq.response("v1/clinics/read", (payload) => {
     payload = JSON.parse(payload)
