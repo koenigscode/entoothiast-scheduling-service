@@ -170,15 +170,28 @@ mqttReq.response("v1/appointments/create", (payload) => {
 
 mqttReq.response("v1/appointments/read", (payload) => {
     payload = JSON.parse(payload);
+    const token = jwt.decode(payload.token)
     console.log('Received payload:', payload);
-    const appointmentId = parseInt(payload.appointmentId, 10);
+    const appointmentId = parseInt(payload.appointmentId);
     if (isNaN(appointmentId)) {
         return JSON.stringify({ httpStatus: 400, message: 'Invalid payload. Appointment ID is not a valid number.' });
     }
+
     try {
         const result = db.querySync('SELECT * FROM public.appointment WHERE id = $1', [appointmentId]);
-        if (result.length === 0) {
+        console.log(result)
+        if (!result) {
             return JSON.stringify({ httpStatus: 404, message: 'Appointment not found' });
+        }
+    } catch (e){
+        return JSON.stringify( {httpStatus: 500, message: "Some error occurred"})
+    }
+
+
+    try {
+        const result = db.querySync('SELECT * FROM public.appointment WHERE id = $1 and (patient_id = $2 or dentist_id = $2)', [appointmentId, token.id]);
+        if (result.length === 0){
+            return JSON.stringify({ httpStatus: 400, message: "Appointment with this id is not assigned to you"})
         }
         const appointment = result[0];
         return JSON.stringify({ httpStatus: 200, appointment });
@@ -190,16 +203,25 @@ mqttReq.response("v1/appointments/read", (payload) => {
 
 mqttReq.response("v1/appointments/update", (payload) => {
     payload = JSON.parse(payload);
+    const token = jwt.decode(payload.token)
     console.log('Received payload:', payload);
-    const appointmentId = parseInt(payload.appointmentId, 10);
+    const appointmentId = parseInt(payload.appointmentId);
     const requestBody = payload.requestBody;
 
     //check if appointment id is an integer
     if (isNaN(appointmentId)) {
         return JSON.stringify({ httpStatus: 400, message: 'Invalid payload. Appointment ID is not a valid number.' });
     }
-
     try {
+
+        try {
+            const appointemnt = db.querySync('SELECT * FROM public.appointment WHERE id = $1 and (patient_id = $2 or dentist_id = $2)', [appointmentId, token.id]);
+            if (appointemnt.length === 0){
+                return JSON.stringify({ httpStatus: 400, message: "Appointment with this id is not assigned to you"})
+            }
+        } catch (e){
+            return JSON.stringify( {httpStatus: 500, message: "Some error occurred"})
+        }
         const currentAppointment = db.querySync('SELECT * FROM public.appointment WHERE id = $1', [appointmentId]);
 
         if (currentAppointment.length === 0) {
