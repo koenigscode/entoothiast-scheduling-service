@@ -59,6 +59,59 @@ mqttReq.response("v1/timeslots/delete", (payload) => {
 
 mqttReq.response("v1/timeslots/create", (payload) => {
     payload = JSON.parse(payload);
+    if (!payload.start_time || !payload.end_time){
+        return JSON.stringify( {httpStatus: 400, message: "Start time and end time for a timeslot must be specified"} )
+    }
+
+    if (payload.end_time < payload.start_time){
+        return JSON.stringify( {httpStatus: 400, message: "End time must be later then start time"} )
+    }
+
+    try {
+        const token = jwt.decode(payload.token)
+        const timeslot = db.querySync(`SELECT * FROM public.timeslot where start_time = $1 and dentist_id = $2`, [payload.start_time, token.id])
+        if (timeslot.length > 0){
+            return JSON.stringify( {httpStatus: 400, message: "You already have created a timeslot that starts at this time"})
+        }
+    } catch (e){
+        console.log(e)
+        return JSON.stringify( {httpStatus: 500, message: "Some error occurred"})
+    }
+
+    try {
+        const token = jwt.decode(payload.token)
+        const timeslot = db.querySync(`SELECT * FROM public.timeslot where end_time = $1 and dentist_id = $2`, [payload.end_time, token.id])
+        if (timeslot.length > 0){
+            return JSON.stringify( {httpStatus: 400, message: "You already have created a timeslot that ends at this time"})
+        }
+    } catch (e){
+        console.log(e)
+
+        return JSON.stringify( {httpStatus: 500, message: "Some error occurred"})
+    }
+
+    try {
+        const token = jwt.decode(payload.token);
+
+        const overlappingTimeslots = db.querySync(
+            `SELECT * FROM public.timeslot
+             WHERE dentist_id = $1
+             AND (
+                (start_time <= $3 AND end_time >= $2) OR
+                (start_time <= $2 AND end_time >= $3)
+             )`,
+            [token.id, payload.start_time, payload.end_time]
+        );
+
+        if (overlappingTimeslots.length > 0) {
+            return JSON.stringify({ httpStatus: 400, message: "The new timeslot overlaps with existing ones" });
+        }
+    } catch (e) {
+        console.log(e)
+
+        return JSON.stringify({ httpStatus: 500, message: "Error occurred while checking overlapping timeslots" });
+    }
+
 
     try {
         const token = jwt.decode(payload.token)
@@ -74,6 +127,8 @@ mqttReq.response("v1/timeslots/create", (payload) => {
             });
         }
     } catch (e) {
+        console.log(e)
+
         return JSON.stringify({
             httpStatus: 500,
             message: 'Some error occurred'
