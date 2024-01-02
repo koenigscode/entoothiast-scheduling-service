@@ -163,7 +163,6 @@ mqttReq.response("v1/dentists/ratings/create", (payload) => {
         }
         //if there is not dentist with the payload.dentistId -> insert new dentist and new rating
         //don't forget to also send the patient_id -> this table has a compound key of patient_id and dentist_id
-        const token = jwt.decode(payload.token)
         const role = db.querySync(`SELECT role FROM public.user WHERE id = $1`, [payload.dentistId]);
         if (role.length === 0 || role[0].role !== 'dentist') {
             return JSON.stringify({ httpStatus: 400, message: "You can't post a rating for a patient or add a patient to your favorites" });
@@ -244,6 +243,15 @@ mqttReq.response("v1/appointments/create", (payload) => {
 
 mqttReq.response("v1/clinics/create", (payload) => {
     payload = JSON.parse(payload);
+    const token = jwt.decode(payload.token)
+
+    if (!token) {
+        return JSON.stringify({ httpStatus: 401, message: 'Unauthorized' });
+    }
+
+    if (!token.role === 'admin') {
+        return JSON.stringify({ httpStatus: 403, message: 'Forbidden' });
+    }
 
     if (!payload.name || !payload.longitude || !payload.latitude)
         return JSON.stringify({ httpStatus: 400, message: "Name of the clinic, its longitude and latitude must be specified" })
@@ -262,6 +270,16 @@ mqttReq.response("v1/clinics/create", (payload) => {
 
 mqttReq.response("v1/clinics/update", (payload) => {
     payload = JSON.parse(payload);
+    const token = jwt.decode(payload.token)
+
+    if (!token) {
+        return JSON.stringify({ httpStatus: 401, message: 'Unauthorized' });
+    }
+
+    if (!token.role !== 'admin') {
+        return JSON.stringify({ httpStatus: 403, message: 'Forbidden' });
+    }
+
     const clinicId = parseInt(payload.clinicId);
     const requestBody = payload.requestBody;
 
@@ -317,6 +335,15 @@ mqttReq.response("v1/clinics/update", (payload) => {
 
 mqttReq.response("v1/clinics/delete", (payload) => {
     payload = JSON.parse(payload);
+    const token = jwt.decode(payload.token)
+
+    if (!token) {
+        return JSON.stringify({ httpStatus: 401, message: 'Unauthorized' });
+    }
+
+    if (!token.role !== 'admin') {
+        return JSON.stringify({ httpStatus: 403, message: 'Forbidden' });
+    }
 
     const clinicId = parseInt(payload.clinicId);
     if (isNaN(clinicId)) {
@@ -337,9 +364,13 @@ mqttReq.response("v1/clinics/delete", (payload) => {
 
 mqttReq.response("v1/appointments/all", (payload) => {
     payload = JSON.parse(payload)
+    const token = jwt.decode(payload.token)
+
+    if (!token) {
+        return JSON.stringify({ httpStatus: 401, message: 'Unauthorized' });
+    }
 
     try {
-        const token = jwt.decode(payload.token)
         const appointments = db.querySync(`SELECT appointment.id AS appointment_id, appointment.*, timeslot.*, "user".name AS patient_name
         FROM appointment
         JOIN timeslot ON timeslot.id = appointment.timeslot_id
