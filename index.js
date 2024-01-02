@@ -56,6 +56,16 @@ mqttReq.response("v1/timeslots/delete", (payload) => {
 
 mqttReq.response("v1/timeslots/create", (payload) => {
     payload = JSON.parse(payload);
+    const token = jwt.decode(payload.token);
+
+    if (!token) {
+        return JSON.stringify({ httpStatus: 401, message: 'Unauthorized' });
+    }
+
+    if (token.role !== 'dentist') {
+        return JSON.stringify({ httpStatus: 403, message: 'Forbidden' });
+    }
+
     if (!payload.start_time || !payload.end_time) {
         return JSON.stringify({ httpStatus: 400, message: "Start time and end time for a timeslot must be specified" })
     }
@@ -65,7 +75,6 @@ mqttReq.response("v1/timeslots/create", (payload) => {
     }
 
     try {
-        const token = jwt.decode(payload.token)
         const timeslot = db.querySync(`SELECT * FROM public.timeslot where start_time = $1 and dentist_id = $2`, [payload.start_time, token.id])
         if (timeslot.length > 0) {
             return JSON.stringify({ httpStatus: 400, message: "You already have created a timeslot that starts at this time" })
@@ -76,7 +85,6 @@ mqttReq.response("v1/timeslots/create", (payload) => {
     }
 
     try {
-        const token = jwt.decode(payload.token)
         const timeslot = db.querySync(`SELECT * FROM public.timeslot where end_time = $1 and dentist_id = $2`, [payload.end_time, token.id])
         if (timeslot.length > 0) {
             return JSON.stringify({ httpStatus: 400, message: "You already have created a timeslot that ends at this time" })
@@ -88,7 +96,6 @@ mqttReq.response("v1/timeslots/create", (payload) => {
     }
 
     try {
-        const token = jwt.decode(payload.token);
 
         const overlappingTimeslots = db.querySync(
             `SELECT * FROM public.timeslot
@@ -107,18 +114,6 @@ mqttReq.response("v1/timeslots/create", (payload) => {
         console.log(e)
 
         return JSON.stringify({ httpStatus: 500, message: "Error occurred while checking overlapping timeslots" });
-    }
-
-
-    const token = jwt.decode(payload.token)
-    console.log(token)
-
-    if (!token) {
-        return JSON.stringify({ httpStatus: 401, message: 'Unauthorized' });
-    }
-
-    if (token.role !== 'dentist') {
-        return JSON.stringify({ httpStatus: 403, message: 'Forbidden' });
     }
 
     try {
@@ -216,21 +211,6 @@ mqttReq.response("v1/clinics/read", (payload) => {
         return JSON.stringify({ httpStatus: 400, message: "No clinics found" })
     }
 })
-mqttReq.response("v1/timeslots", (payload) => {
-
-    payload = JSON.parse(payload);
-    console.log(payload)
-
-    if (!payload.startTime)
-        return JSON.stringify({ httpStatus: 400, message: "Start time needs to be specified." })
-
-    try {
-        db.querySync("select from public.timeslot where start_time = $1", [payload.startTime || Date.now()])
-        return JSON.stringify({ httpStatus: 201, message: `${payload}` })
-    } catch (e) {
-        return JSON.stringify({ httpStatus: 400, message: "Timeslots with this start time not found." })
-    }
-});
 
 mqttReq.response("v1/appointments/create", (payload) => {
     payload = JSON.parse(payload);
@@ -415,7 +395,7 @@ mqttReq.response("v1/appointments/read", (payload) => {
 mqttReq.response("v1/appointments/update", (payload) => {
     payload = JSON.parse(payload);
     const token = jwt.decode(payload.token)
-    console.log('Received payload:', payload);
+
     const appointmentId = parseInt(payload.appointmentId);
     const requestBody = payload.requestBody;
 
@@ -423,6 +403,18 @@ mqttReq.response("v1/appointments/update", (payload) => {
     if (isNaN(appointmentId)) {
         return JSON.stringify({ httpStatus: 400, message: 'Invalid payload. Appointment ID is not a valid number.' });
     }
+
+    if (!token) {
+        return JSON.stringify({ httpStatus: 401, message: 'Unauthorized' });
+    }
+
+    // Patients may only cancel the appointment
+    if (token.role !== "dentist") {
+        if (requestBody.confirmed !== undefined || requestBody.patient_id !== undefined || requestBody.dentistId !== undefined || requestBody.timeslot_id !== undefined) {
+            return JSON.stringify({ httpStatus: 403, message: 'As a patient, you may only cancel an appointment, not change any other details.' });
+        }
+    }
+
     try {
 
         try {
