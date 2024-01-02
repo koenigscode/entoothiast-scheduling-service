@@ -32,7 +32,7 @@ mqttReq.response("v1/dentists/read", (payload) => {
 
     try {
         const dentists = db.querySync("SELECT id, name, clinic_id FROM public.user WHERE role = 'dentist'")
-        return JSON.stringify({ httpStatus: 200, dentists})
+        return JSON.stringify({ httpStatus: 200, dentists })
     } catch (e) {
         return JSON.stringify({ httpStatus: 500, message: `Some error occurred` })
     }
@@ -59,6 +59,59 @@ mqttReq.response("v1/timeslots/delete", (payload) => {
 
 mqttReq.response("v1/timeslots/create", (payload) => {
     payload = JSON.parse(payload);
+    if (!payload.start_time || !payload.end_time) {
+        return JSON.stringify({ httpStatus: 400, message: "Start time and end time for a timeslot must be specified" })
+    }
+
+    if (payload.end_time < payload.start_time) {
+        return JSON.stringify({ httpStatus: 400, message: "End time must be later then start time" })
+    }
+
+    try {
+        const token = jwt.decode(payload.token)
+        const timeslot = db.querySync(`SELECT * FROM public.timeslot where start_time = $1 and dentist_id = $2`, [payload.start_time, token.id])
+        if (timeslot.length > 0) {
+            return JSON.stringify({ httpStatus: 400, message: "You already have created a timeslot that starts at this time" })
+        }
+    } catch (e) {
+        console.log(e)
+        return JSON.stringify({ httpStatus: 500, message: "Some error occurred" })
+    }
+
+    try {
+        const token = jwt.decode(payload.token)
+        const timeslot = db.querySync(`SELECT * FROM public.timeslot where end_time = $1 and dentist_id = $2`, [payload.end_time, token.id])
+        if (timeslot.length > 0) {
+            return JSON.stringify({ httpStatus: 400, message: "You already have created a timeslot that ends at this time" })
+        }
+    } catch (e) {
+        console.log(e)
+
+        return JSON.stringify({ httpStatus: 500, message: "Some error occurred" })
+    }
+
+    try {
+        const token = jwt.decode(payload.token);
+
+        const overlappingTimeslots = db.querySync(
+            `SELECT * FROM public.timeslot
+             WHERE dentist_id = $1
+             AND (
+                (start_time < $3 AND end_time > $2) OR
+                (start_time < $2 AND end_time > $3)
+             )`,
+            [token.id, payload.start_time, payload.end_time]
+        );
+
+        if (overlappingTimeslots.length > 0) {
+            return JSON.stringify({ httpStatus: 400, message: "The new timeslot overlaps with existing ones" });
+        }
+    } catch (e) {
+        console.log(e)
+
+        return JSON.stringify({ httpStatus: 500, message: "Error occurred while checking overlapping timeslots" });
+    }
+
 
     try {
         const token = jwt.decode(payload.token)
@@ -70,10 +123,12 @@ mqttReq.response("v1/timeslots/create", (payload) => {
             return JSON.stringify({
                 httpStatus: 201,
                 message: `Created a new timeslot from ${payload.start_time} to ${payload.end_time}`,
-                timeslot: insertedTimeslot[0] 
+                timeslot: insertedTimeslot[0]
             });
         }
     } catch (e) {
+        console.log(e)
+
         return JSON.stringify({
             httpStatus: 500,
             message: 'Some error occurred'
@@ -87,15 +142,15 @@ mqttReq.response("v1/dentists/ratings/create", (payload) => {
     try {
         console.log(typeof payload.rating)
         console.log(typeof payload.favorite_dentist)
-        if (typeof payload.rating != "number" && payload.rating != undefined){
-            return JSON.stringify({ httpStatus: 400, message: "Rating has to be a number"})
+        if (typeof payload.rating != "number" && payload.rating != undefined) {
+            return JSON.stringify({ httpStatus: 400, message: "Rating has to be a number" })
         }
-        
-        if (typeof payload.favorite_dentist != "boolean" && payload.favorite_dentist != undefined){
-            return JSON.stringify({ httpStatus: 400, message: "Favorite_dentist field has to have a boolean value"})
+
+        if (typeof payload.favorite_dentist != "boolean" && payload.favorite_dentist != undefined) {
+            return JSON.stringify({ httpStatus: 400, message: "Favorite_dentist field has to have a boolean value" })
         }
-        if (payload.rating < 1 || payload.rating > 5){
-            return JSON.stringify({ httpStatus: 400, message: "Rating has to be a number between 1 and 5"})
+        if (payload.rating < 1 || payload.rating > 5) {
+            return JSON.stringify({ httpStatus: 400, message: "Rating has to be a number between 1 and 5" })
         }
         //if there is not dentist with the payload.dentistId -> insert new dentist and new rating
         //don't forget to also send the patient_id -> this table has a compound key of patient_id and dentist_id
@@ -105,31 +160,31 @@ mqttReq.response("v1/dentists/ratings/create", (payload) => {
             return JSON.stringify({ httpStatus: 400, message: "You can't post a rating for a patient or add a patient to your favorites" });
         }
         const dentist_on_user = db.querySync(`SELECT * FROM public.patient_on_dentist WHERE dentist_id = $1 and patient_id = $2`, [payload.dentistId, token.id]);
-        if (dentist_on_user.length === 0){
-            if (payload.rating != undefined && payload.favorite_dentist != undefined){
+        if (dentist_on_user.length === 0) {
+            if (payload.rating != undefined && payload.favorite_dentist != undefined) {
                 const rating = parseInt(payload.rating)
                 db.querySync("insert into public.patient_on_dentist (patient_id, dentist_id, rating, favorite_dentist) values ($1, $2, $3, $4)", [token.id, payload.dentistId, rating, payload.favorite_dentist])
-            } else if (payload.rating != undefined){
+            } else if (payload.rating != undefined) {
                 const rating = parseInt(payload.rating)
                 db.querySync("insert into public.patient_on_dentist (patient_id, dentist_id, rating) values ($1, $2, $3)", [token.id, payload.dentistId, rating])
-            } else if (payload.favorite_dentist != undefined){
+            } else if (payload.favorite_dentist != undefined) {
                 db.querySync("insert into public.patient_on_dentist (patient_id, dentist_id, favorite_dentist) values ($1, $2, $3)", [token.id, payload.dentistId, payload.favorite_dentist])
             }
         }
         //if there is a dentist in the dentist_on_patient table, just insert a new rating.
-        else{
-            if (payload.rating != undefined && payload.favorite_dentist != undefined){
+        else {
+            if (payload.rating != undefined && payload.favorite_dentist != undefined) {
                 db.querySync(`UPDATE public.patient_on_dentist SET rating = $1, favorite_dentist = $2 where dentist_id = $3`, [payload.rating, payload.favorite_dentist, payload.dentistId])
             }
-            else if (payload.rating != undefined){
+            else if (payload.rating != undefined) {
                 db.querySync(`UPDATE public.patient_on_dentist SET rating = $1 where dentist_id = $2`, [payload.rating, payload.dentistId])
-            } else if (payload.favorite_dentist != undefined){
+            } else if (payload.favorite_dentist != undefined) {
                 db.querySync(`UPDATE public.patient_on_dentist SET favorite_dentist = $1 where dentist_id = $2`, [payload.favorite_dentist, payload.dentistId])
             }
-             
+
         }
         const dentist = db.querySync(`select * from public.patient_on_dentist where patient_id = $1 and dentist_id = $2`, [token.id, payload.dentistId])
-        return JSON.stringify({ httpStatus: 201, dentist})
+        return JSON.stringify({ httpStatus: 201, dentist })
     } catch (e) {
         console.log(e)
         return JSON.stringify({ httpStatus: 500, message: `Some error occurred`, errorInternal: e })
@@ -143,13 +198,13 @@ mqttReq.response("v1/clinics/read", (payload) => {
 
     try {
         const clinics = db.querySync('SELECT * FROM public.clinic')
-        return JSON.stringify({ httpStatus: 200, clinics})
+        return JSON.stringify({ httpStatus: 200, clinics })
     } catch (e) {
-        return JSON.stringify({ httpStatus: 400, message: "No clinics found"})
+        return JSON.stringify({ httpStatus: 400, message: "No clinics found" })
     }
 })
 mqttReq.response("v1/timeslots", (payload) => {
-    
+
     payload = JSON.parse(payload);
     console.log(payload)
 
@@ -160,7 +215,7 @@ mqttReq.response("v1/timeslots", (payload) => {
         db.querySync("select from public.timeslot where start_time = $1", [payload.startTime || Date.now()])
         return JSON.stringify({ httpStatus: 201, message: `${payload}` })
     } catch (e) {
-        return JSON.stringify({ httpStatus: 400, message: "Timeslots with this start time not found."})
+        return JSON.stringify({ httpStatus: 400, message: "Timeslots with this start time not found." })
     }
 });
 
@@ -183,7 +238,7 @@ mqttReq.response("v1/appointments/all", (payload) => {
 mqttReq.response("v1/appointments/create", (payload) => {
     payload = JSON.parse(payload);
     console.log('Received payload:', payload);
-        if (!payload.patient_id|| !payload.dentist_id || !payload.timeslot_id)
+    if (!payload.patient_id || !payload.dentist_id || !payload.timeslot_id)
         return JSON.stringify({ httpStatus: 400, message: "Patient ID, Dentist ID, Timeslot ID do not exist" })
 
     try {
@@ -191,7 +246,7 @@ mqttReq.response("v1/appointments/create", (payload) => {
             "INSERT INTO public.appointment (patient_id, dentist_id, timeslot_id, cancelled, confirmed) VALUES ($1, $2, $3, $4, $5) RETURNING *",
             [payload.patient_id, payload.dentist_id, payload.timeslot_id, payload.cancelled, payload.confirmed]
         );
-        const appointment= result[0]
+        const appointment = result[0]
         return JSON.stringify({ httpStatus: 201, appointment, message: `Appointment created` });
     } catch (error) {
         console.error('Error processing appointment creation:', error);
