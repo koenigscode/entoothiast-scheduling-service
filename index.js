@@ -1,34 +1,35 @@
 import * as mqtt from "mqtt"
 import MqttRequest from "mqtt-request"
-import PGClient from "pg-native"
-
-const db = new PGClient()
-db.connectSync(process.env.CONNECTION_STRING)
+import { readClinics, createClinic, updateClinic, deleteClinic } from "./controllers/v1/clinics.js"
+import { allAppointments, createAppointment, readAppointment, updateAppointment } from "./controllers/v1/appointments.js"
+import { rateDentist, readDentists } from "./controllers/v1/dentists.js"
+import { createTimeslot, deleteTimeslot } from "./controllers/v1/timeslots.js"
 
 const client = mqtt.connect(process.env.BROKER_URL)
+
+MqttRequest.timeout = 5000;
+
 /** @type {MqttRequest}*/
-const mqttReq = new MqttRequest.default(client);
+export const mqttReq = new MqttRequest.default(client);
 
 console.log(`Broker URL: ${process.env.BROKER_URL}`)
 
-mqttReq.response("demo", payload => {
-    payload = JSON.parse(payload)
-    payload.message += " and hi from scheduling-service"
+mqttReq.response("v1/dentists/read", readDentists);
+mqttReq.response("v1/dentists/ratings/create", rateDentist);
 
-    return JSON.stringify(payload)
-})
+mqttReq.response("v1/timeslots/delete", deleteTimeslot);
+mqttReq.response("v1/timeslots/create", createTimeslot);
 
-mqttReq.response("v1/timeslots", (payload) => {
+mqttReq.response("v1/appointments/all", allAppointments);
+mqttReq.response("v1/appointments/read", readAppointment);
+mqttReq.response("v1/appointments/create", createAppointment);
+mqttReq.response("v1/appointments/update", updateAppointment);
 
-    payload = JSON.parse(payload);
+mqttReq.response("v1/clinics/read", readClinics)
+mqttReq.response("v1/clinics/create", createClinic);
+mqttReq.response("v1/clinics/update", updateClinic);
+mqttReq.response("v1/clinics/delete", deleteClinic);
 
-    try {
-        const timeslots = db.querySync("select from public.timeslot where start_time = $1", [payload.startTime || (new Date()).toISOString()])
-        return JSON.stringify({ httpStatus: 201, timeslots })
-    } catch (e) {
-        return JSON.stringify({ httpStatus: 500, message: "Internal Server Error" })
-    }
-});
 
 client.on("connect", () => {
     console.log("scheduling-service connected to broker")
