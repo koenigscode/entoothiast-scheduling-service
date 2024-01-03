@@ -14,13 +14,13 @@ export const createAppointment = (payload) => {
         return JSON.stringify({ httpStatus: 403, message: 'Forbidden' });
     }
 
-    if (!payload.patient_id || !payload.dentist_id || !payload.timeslot_id)
+    if (!payload.body.patient_id || !payload.body.dentist_id || !payload.body.timeslot_id)
         return JSON.stringify({ httpStatus: 400, message: "Patient ID, Dentist ID, Timeslot ID do not exist" })
 
     try {
         const result = db.querySync(
             "INSERT INTO public.appointment (patient_id, dentist_id, timeslot_id, cancelled, confirmed) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-            [payload.patient_id, payload.dentist_id, payload.timeslot_id, payload.cancelled, payload.confirmed]
+            [payload.body.patient_id, payload.body.dentist_id, payload.body.timeslot_id, payload.body.cancelled, payload.body.confirmed]
         );
         const appointment = result[0]
         return JSON.stringify({ httpStatus: 201, appointment, message: `Appointment created` });
