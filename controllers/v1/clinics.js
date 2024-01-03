@@ -20,7 +20,7 @@ export const createClinic = (payload) => {
         return JSON.stringify({ httpStatus: 401, message: 'Unauthorized' });
     }
 
-    if (!token.role === 'admin') {
+    if (token.role !== 'admin') {
         return JSON.stringify({ httpStatus: 403, message: 'Forbidden' });
     }
 
@@ -47,7 +47,7 @@ export const updateClinic = (payload) => {
         return JSON.stringify({ httpStatus: 401, message: 'Unauthorized' });
     }
 
-    if (!token.role !== 'admin') {
+    if (token.role !== 'admin') {
         return JSON.stringify({ httpStatus: 403, message: 'Forbidden' });
     }
 
@@ -111,7 +111,7 @@ export const deleteClinic = (payload) => {
         return JSON.stringify({ httpStatus: 401, message: 'Unauthorized' });
     }
 
-    if (!token.role !== 'admin') {
+    if (token.role !== 'admin') {
         return JSON.stringify({ httpStatus: 403, message: 'Forbidden' });
     }
 

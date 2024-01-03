@@ -10,7 +10,7 @@ export const createAppointment = (payload) => {
         return JSON.stringify({ httpStatus: 401, message: 'Unauthorized' });
     }
 
-    if (token.role !== 'user') {
+    if (token.role !== 'patient') {
         return JSON.stringify({ httpStatus: 403, message: 'Forbidden' });
     }
 
