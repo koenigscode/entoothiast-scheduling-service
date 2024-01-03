@@ -111,3 +111,16 @@ export const createTimeslot = (payload) => {
         });
     }
 }
+
+export const readTimeslots = (payload)  => {
+
+    payload = JSON.parse(payload);
+
+    try {
+        const timeslots = db.querySync(
+            'SELECT * FROM public.timeslot WHERE start_time = $1', [payload.startTime || (new Date()).toISOString()])
+        return JSON.stringify({ httpStatus: 201, timeslots })
+    } catch (e) {
+        return JSON.stringify({ httpStatus: 500, message: "Internal Server Error" })
+    }
+}

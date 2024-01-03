@@ -3,7 +3,7 @@ import MqttRequest from "mqtt-request"
 import { readClinics, createClinic, updateClinic, deleteClinic } from "./controllers/v1/clinics.js"
 import { allAppointments, createAppointment, readAppointment, updateAppointment } from "./controllers/v1/appointments.js"
 import { rateDentist, readDentists } from "./controllers/v1/dentists.js"
-import { createTimeslot, deleteTimeslot } from "./controllers/v1/timeslots.js"
+import { createTimeslot, deleteTimeslot, readTimeslots } from "./controllers/v1/timeslots.js"
 
 const client = mqtt.connect(process.env.BROKER_URL)
 
@@ -19,6 +19,7 @@ mqttReq.response("v1/dentists/ratings/create", rateDentist);
 
 mqttReq.response("v1/timeslots/delete", deleteTimeslot);
 mqttReq.response("v1/timeslots/create", createTimeslot);
+mqttReq.response("v1/timeslots/read", readTimeslots);
 
 mqttReq.response("v1/appointments/all", allAppointments);
 mqttReq.response("v1/appointments/read", readAppointment);
