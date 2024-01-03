@@ -14,7 +14,7 @@
   "dependencies": {
     "jsonwebtoken": "^9.0.2",
     "mqtt": "^5.3.0",
-    "mqtt-request": "^1.0.0",
+    "mqtt-request": "github:koenigscode/mqtt-request",
     "pg-native": "^3.0.1"
   }
 }
