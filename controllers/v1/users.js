@@ -21,20 +21,21 @@ export const updateUser = (payload) => {
         const updateFields = [];
         const updateValues = [];
 
+        let paramCounter = 1;
         if (requestBody.username) {
-            updateFields.push('username = $1');
+            updateFields.push(`username = $${paramCounter++}`);
             updateValues.push(requestBody.username);
         }
 
         if (requestBody.name) {
-            updateFields.push('name = $2');
+            updateFields.push(`name = $${paramCounter++}`);
             updateValues.push(requestBody.name);
         }
 
         // Update only if there are fields to update
         if (updateFields.length > 0) {
-         const updateQuery = `UPDATE public.user SET ${updateFields.join(', ')} WHERE id = $${updateValues.length + 1} RETURNING *`;
-    
+            const updateQuery = `UPDATE public.user SET ${updateFields.join(', ')} WHERE id = $${paramCounter++} RETURNING *`;
+
             const result = db.querySync(
                 updateQuery,
                 [...updateValues, userId]
