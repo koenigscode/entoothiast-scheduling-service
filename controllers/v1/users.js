@@ -60,3 +60,19 @@ export const updateUser = (payload) => {
     }
 };
 
+
+export const readUserId = (payload) => {
+    
+    payload = JSON.parse(payload);
+    console.log(payload)
+
+    if (!payload)
+        return JSON.stringify({ httpStatus: 404, message: "User ID not found." })
+
+    try {
+        const user = db.querySync("SELECT * FROM public.user WHERE id = $1", [payload])
+        return JSON.stringify({ httpStatus: 201, message: user })
+    } catch (e) {
+        return JSON.stringify({ httpStatus: 500, message: "Internal Server Error"})
+    }
+};
