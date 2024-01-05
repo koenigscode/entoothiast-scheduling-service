@@ -12,6 +12,35 @@ export const readDentists = (payload) => {
     }
 }
 
+export const getTimeslots = (payload) => {
+    payload = JSON.parse(payload);
+    const token = jwt.decode(payload.token);
+    if (!token) {
+        return JSON.stringify({ httpStatus: 401, message: 'Unauthorized' });
+    }
+    try {
+        const dentist = db.querySync('SELECT * FROM public."user" WHERE id = $1', [payload.dentistId])
+        if (dentist.length === 0){
+            return JSON.stringify({ httpStatus: 404, message: "Dentist with this id does not exist"})
+        }
+    } catch (error) {
+        console.error("Error when finding the dentist with this id")
+        return JSON.stringify({ httpStatus: 500, message: "Some error occurred"})
+    }
+    try {
+        const timeslots = db.querySync('SELECT * FROM public.timeslot WHERE dentist_id = $1', [payload.dentistId]);
+
+        if (timeslots && timeslots.length > 0) {
+            return JSON.stringify({ httpStatus: 200, timeslots });
+        } else if (timeslots.length === 0){
+            return JSON.stringify({ httpStatus: 200, message: 'No timeslots found for the dentist' });
+        } 
+    } catch (error) {
+        console.error('Error fetching dentist timeslots:', error);
+        return JSON.stringify({ httpStatus: 500, message: 'Internal Server Error' });
+    }
+}
+
 export const rateDentist = (payload) => {
     payload = JSON.parse(payload)
 
