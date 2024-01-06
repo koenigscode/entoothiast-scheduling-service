@@ -2,7 +2,7 @@ import * as mqtt from "mqtt"
 import MqttRequest from "mqtt-request"
 import { readClinics, createClinic, updateClinic, deleteClinic } from "./controllers/v1/clinics.js"
 import { allAppointments, createAppointment, readAppointment, updateAppointment } from "./controllers/v1/appointments.js"
-import { getTimeslots, rateDentist, readDentists } from "./controllers/v1/dentists.js"
+import { getTimeslots, rateDentist, readDentists, updateDentist } from "./controllers/v1/dentists.js"
 import { readUserId, updateUser, readUserNotifications, readUserAppointments } from "./controllers/v1/users.js"
 import { createTimeslot, deleteTimeslot, readTimeslots } from "./controllers/v1/timeslots.js"
 
@@ -18,6 +18,7 @@ console.log(`Broker URL: ${process.env.BROKER_URL}`)
 mqttReq.response("v1/dentists/read", readDentists);
 mqttReq.response("v1/dentists/ratings/create", rateDentist);
 mqttReq.response("v1/dentists/timeslots/read", getTimeslots);
+mqttReq.response("v1/dentists/update", updateDentist);
 
 mqttReq.response("v1/users/update", updateUser);
 mqttReq.response("v1/users/:userId/read", readUserId);
