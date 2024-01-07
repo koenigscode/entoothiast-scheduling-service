@@ -113,8 +113,100 @@ export const createTimeslot = (payload) => {
 }
 
 export const readTimeslots = (payload)  => {
+    var dentist;
+    var clinic;
+    var timeslots;
+
 
     payload = JSON.parse(payload);
+
+    if(payload.clinic){
+        try{
+            clinic = db.querySync(`SELECT * FROM public.clinic WHERE name = $1`, [payload.clinic])
+            if (clinic.length === 0){
+                return JSON.stringify({ httpStatus: 404, message: "Clinic with this name doesn't exist"})
+            }
+            clinic = clinic[0]
+            console.log(clinic)
+        } catch(error){
+            return JSON.stringify({ httpStatus: 500, message: "Some error occurred when fetching the clinic"})
+        }
+    }
+
+    if(payload.dentist){
+        try{
+            dentist = db.querySync(`SELECT * FROM public."user" WHERE name = $1`, [payload.dentist])
+            if (dentist.length === 0){
+                return JSON.stringify({ httpStatus: 404, message: "Dentist with this name doesn't exist"})
+            }
+            dentist = dentist[0]
+            console.log(dentist)
+            if (dentist.role === 'patient'){
+                return JSON.stringify({ httpStatus: 400, message: "A user with this name is a patient, not a dentist"})
+            }
+        } catch(error){
+            return JSON.stringify({ httpStatus: 500, message: "Some error occurred when fetching the dentist"})
+        }
+    }
+
+    if (payload.clinic && payload.dentist){
+        try {
+            console.log(dentist.id)
+            console.log(clinic.id)
+            timeslots = db.querySync(
+                `SELECT *
+                 FROM public.timeslot 
+                 INNER JOIN public."user"  ON public.timeslot.dentist_id = public."user".id 
+                 INNER JOIN public.clinic  ON public."user".clinic_id = public.clinic.id 
+                 WHERE public.timeslot.start_time >= $1 
+                 AND public."user".id = $2 
+                 AND public.clinic.id = $3`,
+                [
+                    payload.startTime || (new Date()).toISOString(),
+                    dentist.id,
+                    clinic.id
+                ]
+            );
+            } catch (error) {
+                return JSON.stringify({ httpStatus: 500, error: error.message });
+            }}
+    else if (payload.clinic){
+            try {            
+                timeslots = db.querySync(
+                    `SELECT *
+                     FROM public.timeslot 
+                     INNER JOIN public."user"  ON public.timeslot.dentist_id = public."user".id 
+                     INNER JOIN public.clinic  ON public."user".clinic_id = public.clinic.id 
+                     WHERE public.timeslot.start_time >= $1 
+                     AND public.clinic.id = $2`,
+                    [
+                        payload.startTime || (new Date()).toISOString(),
+                        clinic.id
+                    ]
+                );
+    } catch (error) {
+        return JSON.stringify({ httpStatus: 500, error: error.message });
+    }}
+
+    else if (payload.dentist){
+        try {            
+            timeslots = db.querySync(
+                `SELECT *
+                     FROM public.timeslot 
+                     INNER JOIN public."user"  ON public.timeslot.dentist_id = public."user".id 
+                     WHERE public.timeslot.start_time >= $1 
+                     AND public."user".id = $2`,
+                [
+                    payload.startTime || (new Date()).toISOString(),
+                    dentist.id
+                ]
+            );
+} catch (error) {
+    return JSON.stringify({ httpStatus: 500, error: error.message });
+}
+        return JSON.stringify({ httpStatus: 200, timeslots });
+
+    }
 
     try {
         const timeslots = db.querySync(
