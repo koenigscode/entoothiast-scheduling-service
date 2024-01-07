@@ -22,6 +22,10 @@ export const createAppointment = (payload) => {
             "INSERT INTO public.appointment (patient_id, dentist_id, timeslot_id, cancelled, confirmed) VALUES ($1, $2, $3, $4, $5) RETURNING *",
             [payload.body.patient_id, payload.body.dentist_id, payload.body.timeslot_id, payload.body.cancelled, payload.body.confirmed]
         );
+
+        const timeslot = db.querySync("SELECT * FROM public.timeslot WHERE id = $1", [payload.body.timeslot_id])
+        db.querySync("insert into public.notification (user_id, topic, message) values ($1, 'new', $2)", [payload.body.dentist_id, `You have a new appointment at ${timeslot[0].start_time.toLocaleString()}}`])
+
         const appointment = result[0]
         return JSON.stringify({ httpStatus: 201, appointment, message: `Appointment created` });
     } catch (error) {
@@ -128,6 +132,8 @@ export const updateAppointment = (payload) => {
             return JSON.stringify({ httpStatus: 404, message: `Appointment with ID ${appointmentId} not found.` });
         }
 
+        const currentTimeslot = db.querySync('SELECT * FROM public.timeslot WHERE id = $1', [currentAppointment[0].timeslot_id]);
+
         const updateFields = [];
         const updateValues = [];
 
@@ -142,14 +148,27 @@ export const updateAppointment = (payload) => {
 
         if (requestBody.timeslot_id !== undefined) {
             updateFields.push(`timeslot_id = ${requestBody.timeslot_id}`);
+            const newTimeslot = db.querySync('SELECT * FROM public.timeslot WHERE id = $1', [requestBody.timeslot_id]);
+
+            if (newTimeslot.length === 0) {
+                return JSON.stringify({ httpStatus: 404, message: `Timeslot with ID ${requestBody.timeslot_id} not found.` });
+            }
+
+            db.querySync("insert into public.notification (user_id, topic, message) values ($1, 'changed', $2)", [currentAppointment[0].requestBody.patient_id, `Your appointment has been moved to ${newTimeslot[0].start_time.toLocaleString()}`])
         }
 
         if (requestBody.cancelled !== undefined) {
+
             updateFields.push(`cancelled = ${requestBody.cancelled}`);
+            db.querySync("insert into public.notification (user_id, topic, message) values ($1, 'cancelled', $2)", [currentAppointment[0].patient_id, `Your appointment at ${currentTimeslot[0].start_time.toLocaleString()} has been cancelled`])
+
+            db.querySync("insert into public.notification (user_id, topic, message) values ($1, 'cancelled', $2)", [currentAppointment[0].dentist_id, `Your appointment at ${currentTimeslot[0].start_time.toLocaleString()} has been cancelled`])
         }
 
         if (requestBody.confirmed !== undefined) {
             updateFields.push(`confirmed = ${requestBody.confirmed}`);
+            db.querySync("insert into public.notification (user_id, topic, message) values ($1, 'confirmed', $2)", [currentAppointment[0].requestBody.patient_id, `Your appointment at ${currentTimeslot[0].start_time.toLocaleString()} has been confirmed`])
+
         }
 
         if (updateFields.length === 0) {
