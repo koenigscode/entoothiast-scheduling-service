@@ -123,12 +123,9 @@ export const readUserAppointments = (payload) => {
     try {
         const appointments = db.querySync('SELECT * FROM public.appointment where patient_id = $1 OR dentist_id = $1', [payload])
 
-        if (appointments.length === 0) {
-            console.log('No appointments for this user.')
-           return JSON.stringify({ httpStatus: 401, message: 'This user doesn\'t have any appointments yet.' }) 
-        } else {
+        
         return JSON.stringify({ httpStatus: 200, message: appointments })
-        }
+        
 
     } catch (e) {
         return JSON.stringify({ httpStatus: 501, message: 'Internal Server Error'})
