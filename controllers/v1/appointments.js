@@ -18,6 +18,16 @@ export const createAppointment = (payload) => {
         return JSON.stringify({ httpStatus: 400, message: "Patient ID, Dentist ID, Timeslot ID do not exist" })
 
     try {
+        const timeslot = db.querySync('SELECT * FROM public.timeslot where id = $1', [payload.body.timeslot_id])
+        if (timeslot[0].dentist_id !== payload.dentist_id){
+            return JSON.stringify({ httpStatus: 400, message: "The timeslot with this id is assigned to a dentist with another id"})
+        }
+    } catch (error){
+        console.log(error)
+        return JSON.stringify({ httpStatus: 500, message: "An error occurred while fetching the timeslot or the dentist with this id"})
+    }
+
+    try {
         const result = db.querySync(
             "INSERT INTO public.appointment (patient_id, dentist_id, timeslot_id, cancelled, confirmed) VALUES ($1, $2, $3, $4, $5) RETURNING *",
             [payload.body.patient_id, payload.body.dentist_id, payload.body.timeslot_id, payload.body.cancelled, payload.body.confirmed]
