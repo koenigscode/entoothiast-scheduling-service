@@ -19,9 +19,10 @@ console.log(`Broker URL: ${process.env.BROKER_URL}`)
 mqttReq.response("$share/scheduling-service/v1/dentists/read", readDentists);
 mqttReq.response("$share/scheduling-service/v1/dentists/ratings/create", rateDentist);
 
+mqttReq.response("$share/scheduling-service/v1/timeslots/read", readTimeslots);
+mqttReq.response("$share/scheduling-service/v1/dentists/timeslots/read", getTimeslots);
 mqttReq.response("$share/scheduling-service/v1/timeslots/delete", deleteTimeslot);
 mqttReq.response("$share/scheduling-service/v1/timeslots/create", createTimeslot);
-mqttReq.response("$share/scheduling-service/v1/dentists/timeslots/read", getTimeslots);
 mqttReq.response("$share/scheduling-service/v1/dentists/update", updateDentist);
 
 mqttReq.response("$share/scheduling-service/v1/users/update", updateUser);
@@ -29,10 +30,6 @@ mqttReq.response("$share/scheduling-service/v1/users/:userId/read", readUserId);
 mqttReq.response("$share/scheduling-service/v1/users/:userId/notifications/read", readUserNotifications);
 mqttReq.response("$share/scheduling-service/v1/users/notifications/update", markUserNotificationsAsRead);
 mqttReq.response("$share/scheduling-service/v1/users/:userId/appointments/read", readUserAppointments);
-
-mqttReq.response("$share/scheduling-service/v1/timeslots/delete", deleteTimeslot);
-mqttReq.response("$share/scheduling-service/v1/timeslots/create", createTimeslot);
-mqttReq.response("$share/scheduling-service/v1/timeslots/read", readTimeslots);
 
 mqttReq.response("$share/scheduling-service/v1/appointments/all", allAppointments);
 mqttReq.response("$share/scheduling-service/v1/appointments/read", readAppointment);
