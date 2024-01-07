@@ -115,12 +115,12 @@ export const deleteClinic = (payload) => {
         return JSON.stringify({ httpStatus: 403, message: 'Forbidden' });
     }
 
-    if (isNaN(payload.clinicId)) {
+    const clinicId = parseInt(payload.clinicId);
+    if (isNaN(clinicId)) {
         return JSON.stringify({ httpStatus: 400, message: 'Clinic ID is not a valid number.' });
     }
     try {
-        db.querySync('UPDATE public."user" SET clinic_id = NULL WHERE role = $1 AND clinic_id = $2', ['dentist', payload.clinicId])
-        const result = db.querySync('DELETE FROM public.clinic WHERE id = $1 RETURNING *', [payload.clinicId]);
+        const result = db.querySync('DELETE FROM public.clinic WHERE id = $1 RETURNING *', [clinicId]);
         if (result.length === 0) {
             return JSON.stringify({ httpStatus: 404, message: 'Clinic with this id is not found' });
         }
