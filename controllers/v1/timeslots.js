@@ -14,18 +14,31 @@ export const deleteTimeslot = (payload) => {
     }
 
     try {
+        const appointmentCheck = db.querySync(
+            'SELECT id FROM public.appointment WHERE timeslot_id = $1 LIMIT 1', [payload.timeslotId]
+        );
+    
+        if (appointmentCheck && appointmentCheck.length > 0) {
+            return JSON.stringify({
+                httpStatus: 400,
+                message: "You can't delete a timeslot during which a patient has booked an appointment. If this time doesn't work for you anymore, consider cancelling an appointment.",
+            });
+        }
+    
         const result = db.querySync(
             'DELETE FROM public.timeslot WHERE id = $1 AND dentist_id = $2 RETURNING *', [payload.timeslotId, token.id]
         );
-
+    
         if (result && result.length > 0) {
             return JSON.stringify({ httpStatus: 200, timeslot: result });
         } else {
             return JSON.stringify({ httpStatus: 404, message: 'Timeslot ID not found' });
         }
     } catch (e) {
+        console.log(e);
         return JSON.stringify({ httpStatus: 500, message: `Some error occurred` });
     }
+    
 }
 
 export const createTimeslot = (payload) => {
@@ -109,5 +122,18 @@ export const createTimeslot = (payload) => {
             httpStatus: 500,
             message: 'Some error occurred'
         });
+    }
+}
+
+export const readTimeslots = (payload)  => {
+
+    payload = JSON.parse(payload);
+
+    try {
+        const timeslots = db.querySync(
+            'SELECT * FROM public.timeslot WHERE start_time >= $1', [payload.startTime || (new Date()).toISOString()])
+        return JSON.stringify({ httpStatus: 201, timeslots })
+    } catch (e) {
+        return JSON.stringify({ httpStatus: 500, message: "Internal Server Error" })
     }
 }

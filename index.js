@@ -2,8 +2,9 @@ import * as mqtt from "mqtt"
 import MqttRequest from "mqtt-request"
 import { readClinics, createClinic, updateClinic, deleteClinic } from "./controllers/v1/clinics.js"
 import { allAppointments, createAppointment, readAppointment, updateAppointment } from "./controllers/v1/appointments.js"
-import { rateDentist, readDentists } from "./controllers/v1/dentists.js"
-import { createTimeslot, deleteTimeslot } from "./controllers/v1/timeslots.js"
+import { getTimeslots, rateDentist, readDentists, updateDentist } from "./controllers/v1/dentists.js"
+import { readUserId, updateUser, readUserNotifications, readUserAppointments, markUserNotificationsAsRead } from "./controllers/v1/users.js"
+import { createTimeslot, deleteTimeslot, readTimeslots } from "./controllers/v1/timeslots.js"
 
 const client = mqtt.connect(process.env.BROKER_URL)
 
@@ -20,6 +21,18 @@ mqttReq.response("$share/scheduling-service/v1/dentists/ratings/create", rateDen
 
 mqttReq.response("$share/scheduling-service/v1/timeslots/delete", deleteTimeslot);
 mqttReq.response("$share/scheduling-service/v1/timeslots/create", createTimeslot);
+mqttReq.response("$share/scheduling-service/v1/dentists/timeslots/read", getTimeslots);
+mqttReq.response("$share/scheduling-service/v1/dentists/update", updateDentist);
+
+mqttReq.response("v1/users/update", updateUser);
+mqttReq.response("v1/users/:userId/read", readUserId);
+mqttReq.response("v1/users/:userId/notifications/read", readUserNotifications);
+mqttReq.response("v1/users/notifications/update", markUserNotificationsAsRead);
+mqttReq.response("v1/users/:userId/appointments/read", readUserAppointments);
+
+mqttReq.response("v1/timeslots/delete", deleteTimeslot);
+mqttReq.response("v1/timeslots/create", createTimeslot);
+mqttReq.response("v1/timeslots/read", readTimeslots);
 
 mqttReq.response("$share/scheduling-service/v1/appointments/all", allAppointments);
 mqttReq.response("$share/scheduling-service/v1/appointments/read", readAppointment);
