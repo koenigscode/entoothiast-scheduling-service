@@ -161,30 +161,30 @@ export const readUserAppointments = (payload) => {
         return JSON.stringify({ httpStatus: 404, message: 'User not found.' })
 
 
-        try {
-            if (payload.timespan === 'past') {
-                const appointments = db.querySync(
-                    'SELECT * FROM public.appointment INNER JOIN public.timeslot ON public.appointment.timeslot_id = public.timeslot.id WHERE (public.appointment.patient_id = $1 OR public.appointment.dentist_id = $1) AND public.timeslot.start_time < $2',
-                    [payload.user_id, new Date().toISOString()]
-                );
-                return JSON.stringify({ httpStatus: 200, message: appointments });
-            }
-        
-            if (payload.timespan === 'upcoming') {
-                const appointments = db.querySync(
-                    'SELECT * FROM public.appointment INNER JOIN public.timeslot ON public.appointment.timeslot_id = public.timeslot.id WHERE (public.appointment.patient_id = $1 OR public.appointment.dentist_id = $1) AND public.timeslot.start_time >= $2',
-                    [payload.user_id, new Date().toISOString()]
-                );
-                return JSON.stringify({ httpStatus: 200, message: appointments });
-            }
-        
-            
+    try {
+        if (payload.timespan === 'past') {
             const appointments = db.querySync(
-                'SELECT * FROM public.appointment WHERE patient_id = $1 OR dentist_id = $1',
-                [payload.user_id]
+                'SELECT * FROM public.appointment INNER JOIN public.timeslot ON public.appointment.timeslot_id = public.timeslot.id WHERE (public.appointment.patient_id = $1 OR public.appointment.dentist_id = $1) AND public.timeslot.start_time < $2',
+                [payload.user_id, new Date().toISOString()]
             );
-            return JSON.stringify({ httpStatus: 200, message: appointments });
-        } catch (e) {
-            return JSON.stringify({ httpStatus: 500, message: 'Internal Server Error' });
+            return JSON.stringify({ httpStatus: 200, appointments });
         }
-    }        
+
+        if (payload.timespan === 'upcoming') {
+            const appointments = db.querySync(
+                'SELECT * FROM public.appointment INNER JOIN public.timeslot ON public.appointment.timeslot_id = public.timeslot.id WHERE (public.appointment.patient_id = $1 OR public.appointment.dentist_id = $1) AND public.timeslot.start_time >= $2',
+                [payload.user_id, new Date().toISOString()]
+            );
+            return JSON.stringify({ httpStatus: 200, appointments });
+        }
+
+
+        const appointments = db.querySync(
+            'SELECT * FROM public.appointment WHERE patient_id = $1 OR dentist_id = $1',
+            [payload.user_id]
+        );
+        return JSON.stringify({ httpStatus: 200, appointments });
+    } catch (e) {
+        return JSON.stringify({ httpStatus: 500, message: 'Internal Server Error' });
+    }
+}        
