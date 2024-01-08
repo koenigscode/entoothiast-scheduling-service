@@ -167,16 +167,13 @@ export const readTimeslots = (payload) => {
             console.log(dentist.id)
             console.log(clinic.id)
             timeslots = db.querySync(
-                `SELECT public.timeslot.*,
-                 public."user".name, public."user".username, public."user".id, public."user".clinic_id
-                 FROM public.timeslot
-                 left join public."appointment" on public.timeslot.id = public."appointment".timeslot_id
-                 INNER JOIN public."user"  ON public.timeslot.dentist_id = public."user".id 
-                 INNER JOIN public.clinic  ON public."user".clinic_id = public.clinic.id 
-                 WHERE public.timeslot.start_time >= $1 
-                 and "appointment".timeslot_id is null or "appointment"."cancelled" = true
-                 AND public."user".id = $2 
-                 AND public.clinic.id = $3`,
+                `SELECT timeslot.*, public."user".name as dentist_name, public."user".clinic_id
+                FROM timeslot
+                LEFT JOIN appointment ON timeslot.id = appointment.timeslot_id
+                INNER JOIN "user" ON timeslot.dentist_id = "user".id
+                AND ("timeslot".dentist_id = $2)
+                WHERE ("user".clinic_id = $3)
+                AND (appointment.timeslot_id IS NULL OR appointment.cancelled = TRUE) and timeslot.start_time >= $1`,
                 [
                     payload.startTime || (new Date()).toISOString(),
                     dentist.id,
@@ -191,21 +188,12 @@ export const readTimeslots = (payload) => {
     else if (payload.clinic) {
         try {
             timeslots = db.querySync(
-                `SELECT public.timeslot.id as timeslot_id, public.timeslot.start_time, public.timeslot.end_time,
-                   public."user".name, public."user".username, public."user".id, public."user".clinic_id
-                     FROM public.timeslot
-                     left join public."appointment" on public.timeslot.id = public."appointment".timeslot_id
-                     INNER JOIN public."user"  ON public.timeslot.dentist_id = public."user".id 
-                     INNER JOIN public.clinic  ON public."user".clinic_id = public.clinic.id 
-                     where "appointment".timeslot_id is null or "appointment"."cancelled" = true
-                     and public.timeslot.start_time >= $1 
-                     AND public.clinic.id = $2`,
-                [
-                    payload.startTime || (new Date()).toISOString(),
-                    clinic.id
-                ]
+                `SELECT timeslot.*, public."user".name as dentist_name, public."user".clinic_id
+                FROM timeslot
+                LEFT JOIN appointment ON timeslot.id = appointment.timeslot_id
+                INNER JOIN "user" ON timeslot.dentist_id = "user".id
+                WHERE ("user".clinic_id = $2) AND (appointment.timeslot_id IS NULL OR appointment.cancelled = TRUE) and timeslot.start_time >= $1`, [payload.startTime || (new Date()).toISOString(), clinic.id]
             );
-
             return JSON.stringify({ httpStatus: 200, timeslots });
         } catch (error) {
             return JSON.stringify({ httpStatus: 500, error: error.message });
@@ -215,14 +203,11 @@ export const readTimeslots = (payload) => {
     else if (payload.dentist) {
         try {
             timeslots = db.querySync(
-                `SELECT public.timeslot.*,
-                   public."user".name, public."user".username, public."user".id, public."user".clinic_id
-                     FROM public.timeslot
-                     left join public."appointment" on public.timeslot.id = public."appointment".timeslot_id
-                     INNER JOIN public."user"  ON public.timeslot.dentist_id = public."user".id 
-                     WHERE public.timeslot.start_time >= $1 
-                     and "appointment".timeslot_id is null or "appointment"."cancelled" = true
-                     AND public."user".id = $2`,
+                `SELECT timeslot.*, public."user".name as dentist_name, public."user".clinic_id
+                FROM timeslot
+                LEFT JOIN appointment ON timeslot.id = appointment.timeslot_id
+                INNER JOIN "user" ON timeslot.dentist_id = "user".id
+                WHERE ("timeslot".dentist_id = $2) AND (appointment.timeslot_id IS NULL OR appointment.cancelled = TRUE) and timeslot.start_time >= $1`,
                 [
                     payload.startTime || (new Date()).toISOString(),
                     dentist.id
@@ -238,13 +223,11 @@ export const readTimeslots = (payload) => {
 
     try {
         const timeslots = db.querySync(
-            `SELECT public.timeslot.*,
-               public."user".name, public."user".username, public."user".id, public."user".clinic_id
-                FROM public.timeslot
-                left join public."appointment" on public.timeslot.id = public."appointment".timeslot_id
-                INNER JOIN public."user" ON public.timeslot.dentist_id = public."user".id
-                WHERE start_time >= $1
-                "appointment".timeslot_id is null or "appointment"."cancelled" = true`, [payload.startTime || (new Date()).toISOString()])
+            `SELECT timeslot.*, public."user".name as dentist_name, public."user".clinic_id
+            FROM timeslot
+            LEFT JOIN appointment ON timeslot.id = appointment.timeslot_id
+            INNER JOIN "user" ON timeslot.dentist_id = "user".id
+            WHERE (appointment.timeslot_id IS NULL OR appointment.cancelled = TRUE) and timeslot.start_time >= $1`, [payload.startTime || (new Date()).toISOString()])
         return JSON.stringify({ httpStatus: 201, timeslots })
     } catch (e) {
         console.log(e)
