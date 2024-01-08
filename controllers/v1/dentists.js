@@ -12,6 +12,75 @@ export const readDentists = (payload) => {
     }
 }
 
+export const updateDentist = (payload) => {
+    payload = JSON.parse(payload);
+
+    const userId = parseInt(payload.userId);
+    const requestBody = payload.requestBody;
+
+    if (isNaN(userId)) {
+        return JSON.stringify({ httpStatus: 400, message: 'Invalid payload. User ID is not a valid number.' });
+    }
+
+    if (parseInt(requestBody.clinic) <= 0){
+        return JSON.stringify({ httpStatus: 400, message: "Clinic id is not a valid number"} )
+    }
+
+    try {
+        const currentDentist = db.querySync('SELECT * FROM public.user WHERE id = $1', [userId]);
+        if (currentDentist.length === 0) {
+            return JSON.stringify({ httpStatus: 404, message: `User with ID ${userId} not found.` });
+        }
+        console.log(currentDentist)
+        if (currentDentist[0].role !== 'dentist') {
+            return JSON.stringify({ httpStatus: 400, message: "You can only assign a dentist to a clinic"})
+        }
+        
+        const result = db.querySync('UPDATE public."user" SET clinic_id = $1 where id = $2 RETURNING *', [requestBody.clinic, userId])
+        
+            
+        const updatedDentist = result.length > 0 ? result[0] : null;
+
+            if (!updatedDentist) {
+                return JSON.stringify({ httpStatus: 500, message: 'Failed to retrieve updated dentist.' });
+            }
+
+            return JSON.stringify({ httpStatus: 200, message: `Clinic for dentist with ID ${userId} updated successfully.`, user: updateDentist });
+    } catch (error) {
+        return JSON.stringify({ httpStatus: 500, message: 'Some error occurred' });
+    }
+};
+
+
+export const getTimeslots = (payload) => {
+    payload = JSON.parse(payload);
+    const token = jwt.decode(payload.token);
+    if (!token) {
+        return JSON.stringify({ httpStatus: 401, message: 'Unauthorized' });
+    }
+    try {
+        const dentist = db.querySync('SELECT * FROM public."user" WHERE id = $1', [payload.dentistId])
+        if (dentist.length === 0){
+            return JSON.stringify({ httpStatus: 404, message: "Dentist with this id does not exist"})
+        }
+    } catch (error) {
+        console.error("Error when finding the dentist with this id")
+        return JSON.stringify({ httpStatus: 500, message: "Some error occurred"})
+    }
+    try {
+        const timeslots = db.querySync('SELECT * FROM public.timeslot WHERE dentist_id = $1', [payload.dentistId]);
+
+        if (timeslots && timeslots.length > 0) {
+            return JSON.stringify({ httpStatus: 200, timeslots });
+        } else if (timeslots.length === 0){
+            return JSON.stringify({ httpStatus: 200, message: 'No timeslots found for the dentist' });
+        } 
+    } catch (error) {
+        console.error('Error fetching dentist timeslots:', error);
+        return JSON.stringify({ httpStatus: 500, message: 'Internal Server Error' });
+    }
+}
+
 export const rateDentist = (payload) => {
     payload = JSON.parse(payload)
 

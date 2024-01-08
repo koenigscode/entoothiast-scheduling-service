@@ -1,6 +1,7 @@
 import db from '../../db.js';
 import bcrypt from 'bcrypt';
 const PW_SALT_ROUNDS = process.env.PW_SALT_ROUNDS || 10;
+import jwt from "jsonwebtoken"
 
 export const updateUser = (payload) => {
     payload = JSON.parse(payload);
@@ -91,29 +92,61 @@ export const readUserId = (payload) => {
 
 
 export const readUserNotifications = (payload) => {
-
     payload = JSON.parse(payload);
-    console.log('Received payload:', payload)
+    const token = jwt.decode(payload.token)
 
-    if (!payload)
-        return JSON.stringify({ httpStatus: 404, message: 'User ID not found.' })
+    if (!token) {
+        return JSON.stringify({ httpStatus: 401, message: 'Unauthorized' })
+    }
 
-    const user = db.querySync('SELECT * FROM public.user WHERE id = $1', [payload])
-    if (user.length == 0)
+    if (`${token.id}` !== `${payload.userId}`) {
+        return JSON.stringify({ httpStatus: 403, message: "You may not access other users' notifications" })
+    }
+
+    const user = db.querySync('SELECT * FROM public.user WHERE id = $1', [payload.userId])
+    if (user.length === 0)
         return JSON.stringify({ httpStatus: 404, message: 'User not found.' })
 
+
+    let query = 'SELECT * FROM public.notification where user_id = $1 order by id desc';
+    let params = [payload.userId];
+    if (payload.limit) {
+        query += ' limit $2';
+        params.push(payload.limit);
+    }
     try {
-        const notifications = db.querySync('SELECT * FROM public.notification where user_id = $1', [payload])
-        console.log(notifications.length)
-        if (notifications.length === 0) {
-            console.log('No notifications for this user.')
-            return JSON.stringify({ httpStatus: 201, message: 'This user doesn\'t have any notifications yet.' })
-        }
-        return JSON.stringify({ httpStatus: 200, message: notifications })
+        const notifications = db.querySync(query, params)
+
+        return JSON.stringify({ httpStatus: 200, notifications })
     } catch (e) {
         return JSON.stringify({ httpStatus: 500, message: 'Internal Server Error' })
     }
 };
+
+export const markUserNotificationsAsRead = (payload) => {
+    payload = JSON.parse(payload);
+    const token = jwt.decode(payload.token)
+
+    if (!token) {
+        return JSON.stringify({ httpStatus: 401, message: 'Unauthorized' })
+    }
+
+    if (`${token.id}` !== `${payload.userId}`) {
+        return JSON.stringify({ httpStatus: 403, message: "You may not access other users' notifications" })
+    }
+
+    const user = db.querySync('SELECT * FROM public.user WHERE id = $1', [payload.userId])
+    if (user.length === 0)
+        return JSON.stringify({ httpStatus: 404, message: 'User not found.' })
+
+    try {
+        db.querySync('UPDATE public.notification SET read = true WHERE user_id = $1', [payload.userId])
+        return JSON.stringify({ httpStatus: 200, message: 'Notifications marked as read' })
+    } catch {
+        return JSON.stringify({ httpStatus: 500, message: 'Internal Server Error' })
+    }
+
+}
 
 export const readUserAppointments = (payload) => {
 
