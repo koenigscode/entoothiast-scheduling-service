@@ -1,4 +1,6 @@
 import db from '../../db.js';
+import bcrypt from 'bcrypt';
+const PW_SALT_ROUNDS = process.env.PW_SALT_ROUNDS || 10;
 import jwt from "jsonwebtoken"
 
 export const updateUser = (payload) => {
@@ -31,6 +33,12 @@ export const updateUser = (payload) => {
         if (requestBody.name) {
             updateFields.push(`name = $${paramCounter++}`);
             updateValues.push(requestBody.name);
+        }
+
+        if (requestBody.password) {
+            updateFields.push(`pw_hash = $${paramCounter++}`);
+            const passwordHash = bcrypt.hashSync(requestBody.password, PW_SALT_ROUNDS)
+            updateValues.push(passwordHash);
         }
 
         // Update only if there are fields to update
@@ -156,7 +164,10 @@ export const readUserAppointments = (payload) => {
     try {
         const appointments = db.querySync('SELECT * FROM public.appointment where patient_id = $1 OR dentist_id = $1', [payload])
 
+
         return JSON.stringify({ httpStatus: 200, message: appointments })
+
+
     } catch (e) {
         return JSON.stringify({ httpStatus: 501, message: 'Internal Server Error' })
     }

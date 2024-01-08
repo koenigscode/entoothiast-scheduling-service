@@ -69,17 +69,17 @@ export const updateClinic = (payload) => {
         const updateValues = [];
 
         if (requestBody.name !== undefined) {
-            updateFields.push(`name = $1`);
+            updateFields.push(`name = $${updateValues.length + 1}`);
             updateValues.push(requestBody.name);
         }
 
         if (requestBody.latitude !== undefined) {
-            updateFields.push(`latitude = $2`);
+            updateFields.push(`latitude = $${updateValues.length + 1}`);
             updateValues.push(requestBody.latitude);
         }
 
         if (requestBody.longitude !== undefined) {
-            updateFields.push(`longitude = $3`);
+            updateFields.push(`longitude = $${updateValues.length + 1}`);
             updateValues.push(requestBody.longitude);
         }
 
