@@ -1,4 +1,6 @@
 import db from '../../db.js';
+import bcrypt from 'bcrypt';
+const PW_SALT_ROUNDS = process.env.PW_SALT_ROUNDS || 10;
 
 export const updateUser = (payload) => {
     payload = JSON.parse(payload);
@@ -32,6 +34,12 @@ export const updateUser = (payload) => {
             updateValues.push(requestBody.name);
         }
 
+        if (requestBody.password) {
+            updateFields.push(`pw_hash = $${paramCounter++}`);
+            const passwordHash = bcrypt.hashSync(requestBody.password, PW_SALT_ROUNDS)
+            updateValues.push(passwordHash);
+        }
+
         // Update only if there are fields to update
         if (updateFields.length > 0) {
             const updateQuery = `UPDATE public.user SET ${updateFields.join(', ')} WHERE id = $${paramCounter++} RETURNING *`;
@@ -40,7 +48,7 @@ export const updateUser = (payload) => {
                 updateQuery,
                 [...updateValues, userId]
             );
-            
+
             const updatedUser = result.length > 0 ? result[0] : null;
 
             if (!updatedUser) {
@@ -62,7 +70,7 @@ export const updateUser = (payload) => {
 
 
 export const readUserId = (payload) => {
-    
+
     payload = JSON.parse(payload);
     console.log('Received payload:', payload)
 
@@ -71,28 +79,28 @@ export const readUserId = (payload) => {
 
     try {
         const user = db.querySync('SELECT * FROM public.user WHERE id = $1', [payload])
-        
+
         if (user.length == 0)
-         return JSON.stringify({ httpStatus: 404, message: 'User not found.' })
+            return JSON.stringify({ httpStatus: 404, message: 'User not found.' })
 
         return JSON.stringify({ httpStatus: 201, message: user })
     } catch (e) {
-        return JSON.stringify({ httpStatus: 500, message: 'Internal Server Error'})
+        return JSON.stringify({ httpStatus: 500, message: 'Internal Server Error' })
     }
 };
 
 
 export const readUserNotifications = (payload) => {
-   
-    payload = JSON.parse(payload);
-     console.log('Received payload:', payload)
 
-     if (!payload)
+    payload = JSON.parse(payload);
+    console.log('Received payload:', payload)
+
+    if (!payload)
         return JSON.stringify({ httpStatus: 404, message: 'User ID not found.' })
 
     const user = db.querySync('SELECT * FROM public.user WHERE id = $1', [payload])
     if (user.length == 0)
-         return JSON.stringify({ httpStatus: 404, message: 'User not found.' })
+        return JSON.stringify({ httpStatus: 404, message: 'User not found.' })
 
     try {
         const notifications = db.querySync('SELECT * FROM public.notification where user_id = $1', [payload])
@@ -103,12 +111,12 @@ export const readUserNotifications = (payload) => {
         }
         return JSON.stringify({ httpStatus: 200, message: notifications })
     } catch (e) {
-        return JSON.stringify({ httpStatus: 500, message: 'Internal Server Error'})
+        return JSON.stringify({ httpStatus: 500, message: 'Internal Server Error' })
     }
 };
 
 export const readUserAppointments = (payload) => {
-   
+
     payload = JSON.parse(payload);
     console.log('Received payload:', payload);
 
@@ -117,17 +125,17 @@ export const readUserAppointments = (payload) => {
 
     const user = db.querySync('SELECT * FROM public.user WHERE id = $1', [payload])
     if (user.length == 0)
-         return JSON.stringify({ httpStatus: 404, message: 'User not found.' })
+        return JSON.stringify({ httpStatus: 404, message: 'User not found.' })
 
 
     try {
         const appointments = db.querySync('SELECT * FROM public.appointment where patient_id = $1 OR dentist_id = $1', [payload])
 
-        
+
         return JSON.stringify({ httpStatus: 200, message: appointments })
-        
+
 
     } catch (e) {
-        return JSON.stringify({ httpStatus: 501, message: 'Internal Server Error'})
+        return JSON.stringify({ httpStatus: 501, message: 'Internal Server Error' })
     }
 };
