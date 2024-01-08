@@ -19,12 +19,12 @@ export const createAppointment = (payload) => {
 
     try {
         const timeslot = db.querySync('SELECT * FROM public.timeslot where id = $1', [payload.body.timeslot_id])
-        if (timeslot[0].dentist_id !== payload.dentist_id){
-            return JSON.stringify({ httpStatus: 400, message: "The timeslot with this id is assigned to a dentist with another id"})
+        if (timeslot[0].dentist_id !== payload.body.dentist_id) {
+            return JSON.stringify({ httpStatus: 400, message: "The timeslot with this id is assigned to a dentist with another id" })
         }
-    } catch (error){
+    } catch (error) {
         console.log(error)
-        return JSON.stringify({ httpStatus: 500, message: "An error occurred while fetching the timeslot or the dentist with this id"})
+        return JSON.stringify({ httpStatus: 500, message: "An error occurred while fetching the timeslot or the dentist with this id" })
     }
 
     try {
