@@ -156,19 +156,35 @@ export const readUserAppointments = (payload) => {
     if (!payload)
         return JSON.stringify({ httpStatus: 404, message: 'User ID not found.' })
 
-    const user = db.querySync('SELECT * FROM public.user WHERE id = $1', [payload])
+    const user = db.querySync('SELECT * FROM public.user WHERE id = $1', [payload.user_id])
     if (user.length == 0)
         return JSON.stringify({ httpStatus: 404, message: 'User not found.' })
 
 
-    try {
-        const appointments = db.querySync('SELECT * FROM public.appointment where patient_id = $1 OR dentist_id = $1', [payload])
-
-
-        return JSON.stringify({ httpStatus: 200, message: appointments })
-
-
-    } catch (e) {
-        return JSON.stringify({ httpStatus: 501, message: 'Internal Server Error' })
-    }
-};
+        try {
+            if (payload.timespan === 'past') {
+                const appointments = db.querySync(
+                    'SELECT * FROM public.appointment INNER JOIN public.timeslot ON public.appointment.timeslot_id = public.timeslot.id WHERE (public.appointment.patient_id = $1 OR public.appointment.dentist_id = $1) AND public.timeslot.start_time < $2',
+                    [payload.user_id, new Date().toISOString()]
+                );
+                return JSON.stringify({ httpStatus: 200, message: appointments });
+            }
+        
+            if (payload.timespan === 'upcoming') {
+                const appointments = db.querySync(
+                    'SELECT * FROM public.appointment INNER JOIN public.timeslot ON public.appointment.timeslot_id = public.timeslot.id WHERE (public.appointment.patient_id = $1 OR public.appointment.dentist_id = $1) AND public.timeslot.start_time >= $2',
+                    [payload.user_id, new Date().toISOString()]
+                );
+                return JSON.stringify({ httpStatus: 200, message: appointments });
+            }
+        
+            
+            const appointments = db.querySync(
+                'SELECT * FROM public.appointment WHERE patient_id = $1 OR dentist_id = $1',
+                [payload.user_id]
+            );
+            return JSON.stringify({ httpStatus: 200, message: appointments });
+        } catch (e) {
+            return JSON.stringify({ httpStatus: 500, message: 'Internal Server Error' });
+        }
+    }        
