@@ -79,7 +79,19 @@ export const readUserId = (payload) => {
         return JSON.stringify({ httpStatus: 404, message: 'User ID not found.' })
 
     try {
-        const user = db.querySync('SELECT * FROM public.user WHERE id = $1', [payload])
+        const user = db.querySync(`
+            SELECT
+                u.id,
+                u.name,
+                u.username,
+                u.clinic_id,
+                u.role,
+                ROUND(AVG(pod.rating)) AS average_rating
+            FROM public.user u
+            LEFT JOIN public.patient_on_dentist pod ON u.id = pod.dentist_id
+            WHERE u.id = $1
+            GROUP BY u.id, pod.dentist_id
+        `, [payload])
 
         if (user.length == 0)
             return JSON.stringify({ httpStatus: 404, message: 'User not found.' })
