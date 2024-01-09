@@ -147,7 +147,7 @@ export const getClinic = (payload) => {
         if (clinic.length == 0)
          return JSON.stringify({ httpStatus: 404, message: 'Clinic not found.' })
 
-        return JSON.stringify({ httpStatus: 201, message: clinic })
+        return JSON.stringify({ httpStatus: 200, message: clinic })
     } catch (e) {
         return JSON.stringify({ httpStatus: 501, message: 'Internal Server Error'})
     }
@@ -166,7 +166,7 @@ export const getDentistsForClinic = (payload) => {
      if (dentists.length == 0)
          return JSON.stringify({ httpStatus: 404, message: 'No dentists found.' })
 
-        return JSON.stringify({ httpStatus: 201, message: dentists })
+        return JSON.stringify({ httpStatus: 200, message: dentists })
         } catch (e) {
         return JSON.stringify({ httpStatus: 501, message: 'Internal Server Error'})
     }
