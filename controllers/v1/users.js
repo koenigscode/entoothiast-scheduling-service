@@ -164,7 +164,14 @@ export const readUserAppointments = (payload) => {
     try {
         if (payload.timespan === 'past') {
             const appointments = db.querySync(
-                'SELECT * FROM public.appointment INNER JOIN public.timeslot ON public.appointment.timeslot_id = public.timeslot.id WHERE (public.appointment.patient_id = $1 OR public.appointment.dentist_id = $1) AND public.timeslot.start_time < $2',
+                `SELECT public.appointment.*, public.user.name as dentist_name, public.clinic.name as clinic_name, public.timeslot.start_time, public.timeslot.end_time
+                FROM public.appointment
+                INNER JOIN public.timeslot ON public.appointment.timeslot_id = public.timeslot.id
+                inner join public.user on public.user.id = public.appointment.dentist_id
+                left join public.clinic on public.user.clinic_id = public.clinic.id
+                WHERE (public.appointment.patient_id = $1 OR public.appointment.dentist_id = $1)
+                AND public.timeslot.start_time <= $2
+                and public.appointment.cancelled = false`,
                 [payload.user_id, new Date().toISOString()]
             );
             return JSON.stringify({ httpStatus: 200, appointments });
@@ -172,7 +179,14 @@ export const readUserAppointments = (payload) => {
 
         if (payload.timespan === 'upcoming') {
             const appointments = db.querySync(
-                'SELECT * FROM public.appointment INNER JOIN public.timeslot ON public.appointment.timeslot_id = public.timeslot.id WHERE (public.appointment.patient_id = $1 OR public.appointment.dentist_id = $1) AND public.timeslot.start_time >= $2',
+                `SELECT public.appointment.*, public.user.name as dentist_name, public.clinic.name as clinic_name, public.timeslot.start_time, public.timeslot.end_time
+                FROM public.appointment
+                INNER JOIN public.timeslot ON public.appointment.timeslot_id = public.timeslot.id
+                inner join public.user on public.user.id = public.appointment.dentist_id
+                left join public.clinic on public.user.clinic_id = public.clinic.id
+                WHERE (public.appointment.patient_id = $1 OR public.appointment.dentist_id = $1)
+                AND public.timeslot.start_time >= $2
+                and public.appointment.cancelled = false`,
                 [payload.user_id, new Date().toISOString()]
             );
             return JSON.stringify({ httpStatus: 200, appointments });
@@ -180,11 +194,18 @@ export const readUserAppointments = (payload) => {
 
 
         const appointments = db.querySync(
-            'SELECT * FROM public.appointment WHERE patient_id = $1 OR dentist_id = $1',
+            `SELECT public.appointment.*, public.user.name as dentist_name, public.clinic.name as clinic_name, public.timeslot.start_time, public.timeslot.end_time
+            FROM public.appointment
+            INNER JOIN public.timeslot ON public.appointment.timeslot_id = public.timeslot.id
+            inner join public.user on public.user.id = public.appointment.dentist_id
+            left join public.clinic on public.user.clinic_id = public.clinic.id
+            WHERE (public.appointment.patient_id = $1 OR public.appointment.dentist_id = $1)
+            and public.appointment.cancelled = false`,
             [payload.user_id]
         );
         return JSON.stringify({ httpStatus: 200, appointments });
     } catch (e) {
+        console.log(e)
         return JSON.stringify({ httpStatus: 500, message: 'Internal Server Error' });
     }
 }        
