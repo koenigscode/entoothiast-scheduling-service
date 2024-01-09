@@ -131,3 +131,43 @@ export const deleteClinic = (payload) => {
         return JSON.stringify({ httpStatus: 500, message: 'Some error occurred' });
     }
 }
+
+export const getClinic = (payload) => {
+    payload = JSON.parse(payload)
+    console.log('Received payload:', payload)
+
+    const token = jwt.decode(payload.token)
+
+    if (!payload.clinicId)
+        return JSON.stringify({ httpStatus: 404, message: 'Clinic ID not found.' })
+
+    try {
+        const clinic = db.querySync('SELECT * FROM public.clinic WHERE id = $1', [payload.clinicId])
+        
+        if (clinic.length == 0)
+         return JSON.stringify({ httpStatus: 404, message: 'Clinic not found.' })
+
+        return JSON.stringify({ httpStatus: 200, message: clinic })
+    } catch (e) {
+        return JSON.stringify({ httpStatus: 501, message: 'Internal Server Error'})
+    }
+};
+
+export const getDentistsForClinic = (payload) => {
+    payload = JSON.parse(payload)
+    console.log('Received payload:', payload)
+
+    if (!payload.clinicId)
+        return JSON.stringify({ httpStatus: 404, message: 'Clinic ID not found.' })
+
+        try {
+    const dentists = db.querySync('SELECT * FROM public.user WHERE clinic_id = $1', [payload.clinicId])
+
+     if (dentists.length == 0)
+         return JSON.stringify({ httpStatus: 404, message: 'No dentists found.' })
+
+        return JSON.stringify({ httpStatus: 200, message: dentists })
+        } catch (e) {
+        return JSON.stringify({ httpStatus: 501, message: 'Internal Server Error'})
+    }
+};
