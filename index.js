@@ -6,7 +6,7 @@ import { getTimeslots, rateDentist, readDentists, updateDentist } from "./contro
 import { readUserId, updateUser, readUserNotifications, readUserAppointments, markUserNotificationsAsRead } from "./controllers/v1/users.js"
 import { createTimeslot, deleteTimeslot, readTimeslots } from "./controllers/v1/timeslots.js"
 
-const client = mqtt.connect(process.env.BROKER_URL)
+const client = mqtt.connect(process.env.BROKER_URL, { clean: true })
 
 MqttRequest.timeout = 5000;
 MqttRequest.publishOptions = { qos: 2 }
@@ -44,4 +44,10 @@ mqttReq.response("$share/scheduling-service/v1/clinics/delete", deleteClinic);
 
 client.on("connect", () => {
     console.log("scheduling-service connected to broker")
+});
+
+process.on('SIGINT', () => {
+    client.end(); // since we're using a clean session, this unsubscribes from all topics
+    console.log('Disconnected from MQTT broker');
+    process.exit();
 });
