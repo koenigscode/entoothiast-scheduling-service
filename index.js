@@ -1,6 +1,6 @@
 import * as mqtt from "mqtt"
 import MqttRequest from "mqtt-request"
-import { readClinics, createClinic, updateClinic, deleteClinic } from "./controllers/v1/clinics.js"
+import { readClinics, createClinic, updateClinic, deleteClinic, getClinic, getDentistsForClinic } from "./controllers/v1/clinics.js"
 import { allAppointments, createAppointment, readAppointment, updateAppointment } from "./controllers/v1/appointments.js"
 import { getTimeslots, rateDentist, readDentists, updateDentist } from "./controllers/v1/dentists.js"
 import { readUserId, updateUser, readUserNotifications, readUserAppointments, markUserNotificationsAsRead } from "./controllers/v1/users.js"
@@ -40,6 +40,9 @@ mqttReq.response("$share/scheduling-service/v1/clinics/read", readClinics)
 mqttReq.response("$share/scheduling-service/v1/clinics/create", createClinic);
 mqttReq.response("$share/scheduling-service/v1/clinics/update", updateClinic);
 mqttReq.response("$share/scheduling-service/v1/clinics/delete", deleteClinic);
+
+mqttReq.response("v1/clinics/:clinicId/read", getClinic);
+mqttReq.response("v1/clinics/:clinicId/dentists/read", getDentistsForClinic);
 
 
 client.on("connect", () => {
