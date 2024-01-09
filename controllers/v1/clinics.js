@@ -120,6 +120,7 @@ export const deleteClinic = (payload) => {
         return JSON.stringify({ httpStatus: 400, message: 'Clinic ID is not a valid number.' });
     }
     try {
+        db.querySync(`UPDATE public."user" SET clinic_id = null where clinic_id = $1`, [clinicId])
         const result = db.querySync('DELETE FROM public.clinic WHERE id = $1 RETURNING *', [clinicId]);
         if (result.length === 0) {
             return JSON.stringify({ httpStatus: 404, message: 'Clinic with this id is not found' });
